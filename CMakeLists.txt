@@ -6,4 +6,5 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(OpenCV REQUIRED)
 
 add_executable(main src/main.cpp)
-target_link_libraries(main ${OpenCV_LIBS})
+find_package(nlohmann_json REQUIRED)
+target_link_libraries(main ${OpenCV_LIBS} nlohmann_json::nlohmann_json)
