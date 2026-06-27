@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.20)
-project(weld_vision)
+cmake_minimum_required(VERSION 3.15)
+project(weld_inspection)
 
 set(CMAKE_CXX_STANDARD 17)
 
