@@ -33,10 +33,24 @@ for (auto& annotation : j["annotations"]) {
     for (int i = 0; i < xs.size(); i++) {
         pts.push_back(cv::Point(xs[i], ys[i]));
     }
+    // 폴리라인 그리기
     cv::polylines(img, pts, true, cv::Scalar(0, 255, 0), 2);
 }
-
+    // 결과 이미지 표시
     cv::imshow("result", img);
+
+    cv::Mat gray, blurred, edges;
+    cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
+    cv::GaussianBlur(gray, blurred, cv::Size(5, 5), 0);
+    cv::Canny(blurred, edges, 50, 150);
+    
+    cv::imshow("gray", gray);
+    cv::imshow("blurred", blurred);
+    cv::imshow("edges", edges);
+    
+
+
+
     cv::waitKey(0);
     return 0;
 }  
