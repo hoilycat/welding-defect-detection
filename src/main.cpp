@@ -57,6 +57,20 @@ for (auto& annotation : j["annotations"]) {
         cv::rectangle(img, box, cv::Scalar(255, 0, 0), 2);
     }
 
+    //특징 추출
+    for (auto& contour : contours){
+        double area = cv::contourArea(contour);
+        double perimeter = cv::arcLength(contour, true);
+        cv::Rect box = cv::boundingRect(contour);
+        double aspect_ratio = (double)box.width / box.height;
+
+        std::cout << "면적: " << area
+                  << "|둘레: " << perimeter
+                  << "|가로세로비: " << aspect_ratio 
+                  << std::endl;
+    }
+
+
     cv::imshow("result2", img);
 
     cv::waitKey(0);
