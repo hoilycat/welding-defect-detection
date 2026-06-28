@@ -48,8 +48,16 @@ for (auto& annotation : j["annotations"]) {
     cv::imshow("blurred", blurred);
     cv::imshow("edges", edges);
     
+    // 컨투어 찾기
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
+    for (auto& contour : contours){
+        cv::Rect box = cv::boundingRect(contour);
+        cv::rectangle(img, box, cv::Scalar(255, 0, 0), 2);
+    }
 
+    cv::imshow("result2", img);
 
     cv::waitKey(0);
     return 0;
