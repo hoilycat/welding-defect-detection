@@ -68,11 +68,28 @@ for (auto& annotation : j["annotations"]) {
                   << "|둘레: " << perimeter
                   << "|가로세로비: " << aspect_ratio 
                   << std::endl;
-    }
 
+        // 라벨링 정보 출력
+        std::string label;
+        if(area < 500){
+            label = "Small Defect";
+        } else if(aspect_ratio > 2.0 || aspect_ratio <0.5){
+            label = "Crack";
+        } else {
+            label = "Porosity";
+        }
+    
+
+    std::cout << "결함 유형: " << label << std::endl;
+
+    cv::Rect box2 = cv::boundingRect(contour);
+    cv::putText(img, label, cv::Point(box2.x, box2.y - 10),
+                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
 
     cv::imshow("result2", img);
 
     cv::waitKey(0);
     return 0;
-}  
+    }  
+
+}
