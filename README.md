@@ -136,9 +136,8 @@ flowchart LR
 
 ### 왜 HuggingFace Spaces인가?
 
-Streamlit Cloud는 무거운 모델 로딩 후 자주 슬립(재시작)되어 실제 데모에 부적합합니다.  
 HuggingFace Spaces는 Gradio 앱을 무료로 24/7 호스팅 — GPU 옵션도 제공합니다.  
-또한 C++ 결과 시각화를 Python 없이 배포할 방법이 없으므로, C++ → JSON → Gradio 파이프라인으로 연결합니다.
+C++ 결과 시각화를 Python과 연결하기 위해 C++ → JSON → Gradio 파이프라인으로 구성합니다.
 
 ### 아키텍처
 
