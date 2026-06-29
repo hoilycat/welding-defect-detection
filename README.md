@@ -129,12 +129,108 @@ flowchart LR
 
 ---
 
+## 🚀 배포 계획 — HuggingFace Spaces + Gradio
+
+> **목표:** C++ 결과 + YOLOv8 결과를 나란히 보여주는 웹 데모  
+> **핵심:** C++을 버리지 않고, JSON 브리지로 Python과 연결
+
+### 왜 HuggingFace Spaces인가?
+
+Streamlit Cloud는 무거운 모델 로딩 후 자주 슬립(재시작)되어 실제 데모에 부적합합니다.  
+HuggingFace Spaces는 Gradio 앱을 무료로 24/7 호스팅 — GPU 옵션도 제공합니다.  
+또한 C++ 결과 시각화를 Python 없이 배포할 방법이 없으므로, C++ → JSON → Gradio 파이프라인으로 연결합니다.
+
+### 아키텍처
+
+```mermaid
+flowchart TD
+    subgraph LOCAL["💻 로컬 C++ (1단계 결과)"]
+        A["📷 X-ray 이미지"] --> B["C++ 파이프라인\nCLAHE · 특징추출 · SVM"]
+        B --> C["📄 result.json\n{defect_type, bbox, score, feature}"]
+    end
+
+    subgraph HF["☁️ HuggingFace Spaces (배포)"]
+        D["📤 이미지 업로드\n(Gradio UI)"] --> E["YOLOv8 추론\nPython · Ultralytics"]
+        E --> F["결과 병합\nC++ JSON + YOLO 결과"]
+        C --> F
+        F --> G["🖥️ Gradio 출력\n좌: C++ 분석 / 우: YOLO 검출"]
+        G --> H["📊 위험도 스코어\n+ 원인 추론 텍스트"]
+    end
+
+    style LOCAL fill:#2d1f1f,stroke:#ff4444,color:#fff
+    style HF fill:#1f1f2d,stroke:#8800ff,color:#fff
+    style G fill:#0f2d1f,stroke:#44ff88,color:#fff
+```
+
+### C++ → JSON 출력 포맷 (설계 예정)
+
+```json
+{
+  "filename": "KakaoTalk_Image_2025.jpg",
+  "defects": [
+    {
+      "type": "crack",
+      "bbox": [120, 340, 200, 380],
+      "circularity": 0.21,
+      "aspect_ratio": 4.5,
+      "mean_brightness": 89.3,
+      "svm_score": 0.91
+    }
+  ],
+  "stage": "cpp_classical_vision"
+}
+```
+
+### Gradio UI 설계
+
+```python
+import gradio as gr
+
+with gr.Blocks(title="WeldVision", theme=gr.themes.Soft()) as demo:
+    gr.Markdown("# 🔥 WeldVision — 용접 결함 검출 데모")
+    gr.Markdown("X-ray 이미지를 업로드하면 C++ 분석 결과 + YOLOv8 검출 결과를 비교합니다.")
+
+    with gr.Row():
+        with gr.Column():
+            img_input = gr.Image(label="📷 X-ray 이미지 업로드", type="filepath")
+            run_btn = gr.Button("🔍 검출 시작", variant="primary")
+
+        with gr.Column():
+            cpp_output  = gr.Image(label="🔴 C++ 분석 (GT 폴리곤 + 특징)")
+            yolo_output = gr.Image(label="🟠 YOLOv8 검출")
+
+    with gr.Row():
+        result_text = gr.Textbox(label="📊 결함 요약 + 위험도", lines=4)
+
+    run_btn.click(fn=predict, inputs=img_input,
+                  outputs=[cpp_output, yolo_output, result_text])
+```
+
+| 영역 | 내용 |
+|------|------|
+| 좌상단 | 이미지 업로드 + 검출 버튼 |
+| 우상단 | C++ 분석 결과 / YOLOv8 검출 결과 나란히 |
+| 하단 | 결함 요약 + 위험도 스코어 텍스트 |
+
+### 배포 단계
+
+| 단계 | 내용 |
+|------|------|
+| ① | C++ SVM 완성 → JSON 출력 기능 추가 |
+| ② | YOLOv8 파인튜닝 (용접 데이터셋 학습) |
+| ③ | Gradio 앱 작성 (JSON 읽기 + YOLO 추론 + 시각화) |
+| ④ | HuggingFace Spaces `gradio` SDK로 배포 |
+| ⑤ | C++ 결과 / YOLO 결과 나란히 비교 데모 완성 |
+
+---
+
 ## 🛠️ 기술 스택
 
 | 단계 | 기술 |
 |------|------|
 | 1단계 | C++17, OpenCV, CMake, vcpkg, nlohmann_json |
-| 2단계 | Python, YOLOv8 (Ultralytics), Streamlit, Plotly |
+| 2단계 | Python, YOLOv8 (Ultralytics), Plotly |
+| 배포 | Gradio, HuggingFace Spaces, C++→JSON 브리지 |
 
 ## 📁 프로젝트 구조
 
