@@ -30,7 +30,7 @@ flowchart LR
         G[📷 이미지 업로드] --> H[YOLOv8 검출\n결함 위치 · 종류]
         H --> I[1단계 특징분석 재활용\n원형도 · 종횡비 · 밝기]
         I --> J[위험도 스코어링\n+ 원인추론 룰]
-        J --> K[🖥️ Streamlit 대시보드]
+        J --> K[🖥️ Gradio 데모\nHuggingFace Spaces]
     end
 
     D -- "특징 설계 자산 그대로 이어받음" --> I
@@ -120,7 +120,7 @@ flowchart LR
     A[📷 이미지 업로드] --> B["YOLOv8 검출\n'여기 결함, 종류=○○'"]
     B --> C["1단계 특징분석\n원형도 · 종횡비 · 밝기"]
     C --> D["위험도 스코어링\n+ 원인추론 룰베이스"]
-    D --> E["🖥️ Streamlit 대시보드\nPlotly 시각화"]
+    D --> E["🖥️ Gradio 데모\nHuggingFace Spaces"]
 
     style B fill:#2d1f0f,stroke:#ff8800,color:#fff
     style C fill:#2d1f1f,stroke:#ff4444,color:#fff
