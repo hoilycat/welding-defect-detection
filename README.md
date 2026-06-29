@@ -3,13 +3,12 @@
 # 🔥 WeldVision
 ### AI 기반 용접 결함 자동 검출 및 품질 분석 시스템
 
-![Language](https://img.shields.io/badge/Stage%201-C%2B%2B%20%7C%20OpenCV-red?style=for-the-badge)
-![Language](https://img.shields.io/badge/Stage%202-Python%20%7C%20YOLOv8-orange?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-In%20Progress-yellow?style=for-the-badge)
+![Now](https://img.shields.io/badge/🔴%20현재-Stage%201%20C%2B%2B%20%7C%20OpenCV-red?style=for-the-badge)
+![Next](https://img.shields.io/badge/🟠%20다음-Stage%202%20Python%20%7C%20YOLOv8-orange?style=for-the-badge)
+![Status](https://img.shields.io/badge/Day%209%20%2F%2010-In%20Progress-yellow?style=for-the-badge)
 
-> "처음엔 C++ 고전비전으로 결함을 직접 분류하며 밑바닥을 이해했고,  
-> 거기서 만든 특징 분석을 발전시켜 YOLO 검출 위에 위험도·원인추론 레이어를 얹은  
-> 풀 시스템으로 키웠습니다." — **밑바닥부터 이해한 개발자**
+> C++ 고전비전으로 결함의 물리적 특성을 직접 이해하는 것부터 시작해,  
+> 특징 분석 → YOLO 검출 → 위험도 추론까지 단계적으로 쌓아가는 프로젝트입니다.
 
 </div>
 
@@ -92,8 +91,10 @@ flowchart TD
 | 6 | 특징 추출 (면적, 둘레, 가로세로비) | ✅ |
 | 7 | 규칙 기반 분류기 + putText | ✅ |
 | 8 | 배치 처리 (컨투어 디버깅 중) | ✅ |
-| 9 | GT 폴리곤 시각화 + 멀티뷰 (CLAHE·Canny·GT) | ✅ |
+| **9** | **GT 폴리곤 시각화 + 멀티뷰 (CLAHE·Canny·GT)** | **👈 여기까지** |
 | 10 | SVM 학습 + 정확도 측정 | 🔜 |
+| 11 | Confusion Matrix + 결과 정리 | 🔜 |
+| 12 | README polish + 지원 완료 | 🔜 |
 
 ---
 
