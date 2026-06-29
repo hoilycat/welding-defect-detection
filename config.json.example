@@ -1,0 +1,5 @@
+{
+    "data_dir": "/Users/yong-yong/Documents/127.창원 지역 특화산업 고도화 및 디지털 전환 촉진을 위한 용접 AI 학습 데이터/3.개방데이터/1.데이터/Training/01.원천데이터",
+    "label_dir": "/Users/yong-yong/Documents/127.창원 지역 특화산업 고도화 및 디지털 전환 촉진을 위한 용접 AI 학습 데이터/3.개방데이터/1.데이터/Training/02.라벨링데이터",
+    "output_dir": "/Users/yong-yong/프로젝트/welding-defect-detection"
+}
