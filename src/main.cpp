@@ -333,6 +333,38 @@ void trainAndEvaluate(const std::string& data_dir, const std::string& label_dir)
     // 모델 저장
     svm->save("svm_model.xml");
     std::cout << "\n모델 저장 완료: svm_model.xml\n";
+
+    // result.json 저장 (Gradio 연결 준비)
+    json results = json::array();
+    for (int i = 0; i < test_n; i++) {
+        int pred = (int)preds.at<float>(i);
+        int gt   = test_lbl.at<int>(i, 0);
+        cv::Rect bbox;  // 실제 bbox는 추후 이미지별 처리 시 채워짐
+
+        json entry;
+        entry["defect_type"] = (pred >= 0 && pred < NUM_CLASSES) ? CLASS_NAMES[pred] : "unknown";
+        entry["gt_label"]    = (gt   >= 0 && gt   < NUM_CLASSES) ? CLASS_NAMES[gt]   : "unknown";
+        entry["correct"]     = (pred == gt);
+        entry["features"] = {
+            {"circularity",   test_feat.at<float>(i, 0)},
+            {"aspect_ratio",  test_feat.at<float>(i, 1)},
+            {"mean_bright",   test_feat.at<float>(i, 2)},
+            {"std_bright",    test_feat.at<float>(i, 3)},
+            {"norm_area",     test_feat.at<float>(i, 4)}
+        };
+        results.push_back(entry);
+    }
+
+    json output;
+    output["accuracy"]  = accuracy;
+    output["total"]     = test_n;
+    output["correct"]   = correct;
+    output["stage"]     = "cpp_classical_vision";
+    output["results"]   = results;
+
+    std::ofstream out_file("result.json");
+    out_file << output.dump(2);
+    std::cout << "결과 저장 완료: result.json\n";
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
