@@ -5,3 +5,5 @@ config.json
 *.png
 *.xml
 Day*_개발일지_*.md
+result.json
+svm_model.xml
