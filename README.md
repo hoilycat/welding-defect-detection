@@ -1,14 +1,15 @@
 <div align="center">
 
 # 🔥 WeldVision
-### AI 기반 용접 결함 자동 검출 및 품질 분석 시스템
+### C++ OpenCV 기반 용접 결함 특징 추출 및 SVM 분류 실험
 
 ![Now](https://img.shields.io/badge/🔴%20현재-Stage%201%20C%2B%2B%20%7C%20OpenCV-red?style=for-the-badge)
 ![Next](https://img.shields.io/badge/🟠%20다음-Stage%202%20Python%20%7C%20YOLOv8-orange?style=for-the-badge)
-![Status](https://img.shields.io/badge/Day%209%20%2F%2010-In%20Progress-yellow?style=for-the-badge)
+![Status](https://img.shields.io/badge/Stage%201-SVM%20Experiment-yellow?style=for-the-badge)
 
 > C++ 고전비전으로 결함의 물리적 특성을 직접 이해하는 것부터 시작해,  
-> 특징 분석 → YOLO 검출 → 위험도 추론까지 단계적으로 쌓아가는 프로젝트입니다.
+> 현재는 GT 폴리곤 라벨을 활용한 특징 추출과 SVM 4클래스 분류를 구현한 단계입니다.  
+> YOLO 검출, 위험도 추론, Gradio 데모는 이후 확장 계획입니다.
 
 </div>
 
@@ -18,15 +19,15 @@
 
 ```mermaid
 flowchart LR
-    subgraph S1["🔴 1단계 — C++ 고전비전 MVP (지금 ~ 2주)"]
-        A[📷 X-ray 이미지 입력] --> B[전처리\nCLAHE · Blur]
-        B --> C[결함 분리\nOtsu · Morphology]
-        C --> D[특징 추출\n원형도 · 종횡비 · 밝기]
+    subgraph S1["🔴 1단계 — C++ OpenCV + SVM 실험 (현재)"]
+        A[📷 X-ray 이미지 + JSON 라벨 입력] --> B[전처리\nGrayscale · CLAHE]
+        B --> C[GT 폴리곤 마스크 생성]
+        C --> D[특징 추출\n원형도 · 종횡비 · 밝기 · 면적]
         D --> E[SVM 분류기]
         E --> F[✅ 정확도 + Confusion Matrix]
     end
 
-    subgraph S2["🟠 2단계 — WeldVision AI 풀 시스템 (7/17 이후)"]
+    subgraph S2["🟠 2단계 — 검출/데모 확장 계획"]
         G[📷 이미지 업로드] --> H[YOLOv8 검출\n결함 위치 · 종류]
         H --> I[1단계 특징분석 재활용\n원형도 · 종횡비 · 밝기]
         I --> J[위험도 스코어링\n+ 원인추론 룰]
@@ -42,10 +43,10 @@ flowchart LR
 
 ---
 
-## 🔴 1단계 — C++ 고전비전 MVP
+## 🔴 1단계 — C++ OpenCV + SVM 실험
 
-> **목표:** 용접 X-ray 이미지에서 결함을 이미지 처리 + SVM으로 자동 분류  
-> **핵심:** 딥러닝 없이, CPU만으로, 전부 C++
+> **목표:** 용접 X-ray 이미지와 JSON 폴리곤 라벨에서 특징을 추출하고 SVM으로 결함 종류를 분류  
+> **현재 범위:** 자동 검출이 아니라, 제공된 GT 폴리곤 라벨을 이용한 특징 기반 분류 실험
 
 ### 왜 고전비전인가?
 - 산업 현장 검사 시스템 상당수가 룰베이스 OpenCV C++ — 실무 직결
@@ -55,19 +56,19 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A["📁 입력 PNG\n(224×224, 8bit)"] --> B
+    A["📁 입력 JPG + JSON 라벨"] --> B
 
-    B["① 전처리\nGrayscale → CLAHE → Median Blur"]
-    B --> C["② 결함 분리\nOtsu Threshold → Morphology Open/Close"]
-    C --> D["③ 특징 추출 ⭐\n면적 · 둘레 · 원형도 · 종횡비\n밝기 평균/표준편차 · blob 개수"]
+    B["① 전처리\nGrayscale → CLAHE"]
+    B --> C["② GT 폴리곤 마스크 생성\nJSON annotations 사용"]
+    C --> D["③ 특징 추출 ⭐\n원형도 · 종횡비\n밝기 평균/표준편차 · 정규화 면적"]
     D --> E["④ SVM 분류\ncv::ml::SVM"]
     E --> F["⑤ 평가\n정확도 + Confusion Matrix"]
 
     G["🩻 결함 유형별 특징"]
     G --> G1["기공 Porosity\n→ 원형도 높음 🔴"]
     G --> G2["균열 Crack\n→ 종횡비 큼 🔴"]
-    G --> G3["용입불량 LP\n→ 어두운 직선 🔴"]
-    G --> G4["정상 ND\n→ 분산 낮음 ✅"]
+    G --> G3["융합불량 Lack of fusion\n→ 형상/밝기 특징"]
+    G --> G4["슬래그혼입 Slag inclusion\n→ 형상/밝기 특징"]
 
     D -. "물리적 의미 매핑" .-> G
 
@@ -77,8 +78,9 @@ flowchart TD
 ```
 
 ### 데이터셋
-- **RIAWELC** — 224×224 방사선 용접 이미지 24,407장, 4클래스
-- LP(용입불량) / PO(기공) / CR(균열) / ND(정상)
+- 방사선 용접 이미지와 JSON 폴리곤 라벨을 사용합니다.
+- 현재 코드의 학습 대상 4클래스: crack / porosity / lack of fusion / slag inclusion
+- `normal`/`ND` 클래스는 현재 SVM 학습 코드에 포함되어 있지 않습니다.
 
 ### 진행 현황
 
@@ -86,24 +88,24 @@ flowchart TD
 |-----|------|------|
 | 1 | OpenCV C++ 환경설정 + 이미지 출력 | ✅ |
 | 2~3 | 한글 경로 처리 + JSON 파싱 + 폴리곤 시각화 | ✅ |
-| 4 | 전처리 파이프라인 (grayscale, blur, canny edge) | ✅ |
-| 5 | 컨투어 검출 + 바운딩 박스 | ✅ |
-| 6 | 특징 추출 (면적, 둘레, 가로세로비) | ✅ |
+| 4 | 전처리 파이프라인 (grayscale, CLAHE, Canny 시각화) | ✅ |
+| 5 | GT 폴리곤 시각화 + 바운딩 박스/형상 실험 | ✅ |
+| 6 | 특징 추출 (원형도, 종횡비, 밝기 통계, 정규화 면적) | ✅ |
 | 7 | 규칙 기반 분류기 + putText | ✅ |
 | 8 | 배치 처리 (컨투어 디버깅 중) | ✅ |
 | 9 | GT 폴리곤 시각화 + 멀티뷰 (CLAHE·Canny·GT) | ✅ |
 | **10** | **SVM 학습 + 정확도 86.2% (4클래스)** | **👈 여기까지** |
-| 11 | Confusion Matrix 분석 + 클래스 불균형 개선 | 🔜 |
+| 11 | Confusion Matrix 분석 + 클래스 불균형 개선 | 일부 구현 / 개선 예정 |
 | 12 | README polish + 지원 완료 | 🔜 |
 
 ---
 
-## 🟠 2단계 — WeldVision AI 풀 시스템
+## 🟠 2단계 계획 — 검출/해석/데모 확장
 
 > **목표:** 검출 + 위험도 해석 + 대시보드  
-> **핵심:** 1단계를 버리지 않고 두뇌로 재활용
+> **상태:** 아직 구현 전 계획입니다. 현재 저장소에는 YOLOv8 학습/추론 코드와 Gradio 앱이 없습니다.
 
-### 위험도 스코어링
+### 위험도 스코어링 아이디어
 
 | 결함 종류 | 위험도 | 권장 조치 | 1단계 특징 연결 | 주요 원인 |
 |-----------|--------|-----------|----------------|-----------|
@@ -132,14 +134,14 @@ flowchart LR
 ## 🚀 배포 계획 — HuggingFace Spaces + Gradio
 
 > **목표:** C++ 결과 + YOLOv8 결과를 나란히 보여주는 웹 데모  
-> **핵심:** C++을 버리지 않고, JSON 브리지로 Python과 연결
+> **상태:** 설계 단계입니다. 현재 구현된 배포 코드는 없습니다.
 
 ### 왜 HuggingFace Spaces인가?
 
-HuggingFace Spaces는 Gradio 앱을 무료로 24/7 호스팅 — GPU 옵션도 제공합니다.  
-C++ 결과 시각화를 Python과 연결하기 위해 C++ → JSON → Gradio 파이프라인으로 구성합니다.
+HuggingFace Spaces는 Gradio 앱 호스팅과 GPU 옵션을 제공합니다.  
+이후 C++ 결과 시각화를 Python과 연결하기 위해 C++ → JSON → Gradio 파이프라인을 구성할 예정입니다.
 
-### 아키텍처
+### 아키텍처 구상
 
 ```mermaid
 flowchart TD
@@ -161,7 +163,9 @@ flowchart TD
     style G fill:#0f2d1f,stroke:#44ff88,color:#fff
 ```
 
-### C++ → JSON 출력 포맷 (설계 예정)
+### C++ → JSON 출력 포맷
+
+현재 코드는 SVM 평가 결과를 `result.json`으로 저장합니다. 아래 포맷은 이후 이미지별 검출 결과와 연동하기 위한 설계 예시입니다.
 
 ```json
 {
@@ -180,7 +184,7 @@ flowchart TD
 }
 ```
 
-### Gradio UI 설계
+### Gradio UI 설계 예시
 
 ```python
 import gradio as gr
@@ -229,19 +233,20 @@ with gr.Blocks(title="WeldVision", theme=gr.themes.Soft()) as demo:
 | 단계 | 기술 |
 |------|------|
 | 1단계 | C++17, OpenCV, CMake, vcpkg, nlohmann_json |
-| 2단계 | Python, YOLOv8 (Ultralytics), Plotly |
-| 배포 | Gradio, HuggingFace Spaces, C++→JSON 브리지 |
+| 2단계 계획 | Python, YOLOv8 (Ultralytics), Plotly |
+| 배포 계획 | Gradio, HuggingFace Spaces, C++→JSON 브리지 |
 
 ## 📁 프로젝트 구조
 
 ```
 welding-defect-detection/
 ├── src/
-│   └── main.cpp          # 메인 처리 파이프라인
-├── build/                # CMake 빌드 결과물
-├── config.json           # 로컬 경로 설정 (git 제외)
+│   ├── main.cpp          # 메인 처리 파이프라인
+│   └── visualize.py      # Python 라벨 시각화 실험 코드
+├── config.json           # 로컬 경로 설정 (현재 저장소에 포함됨)
 ├── config.json.example   # 경로 설정 예시
 ├── CMakeLists.txt        # 빌드 설정
+├── CMakeLists_win.txt    # 이전 Windows용 CMake 설정
 ├── run.bat               # Windows 실행 배치파일
 └── README.md
 ```
@@ -254,6 +259,8 @@ cp config.json.example config.json
 # config.json 열어서 본인 경로로 수정
 ```
 
+> 참고: 현재 저장소에는 `config.json`도 함께 포함되어 있습니다. 다른 환경에서 실행하려면 `data_dir`, `label_dir`를 본인 데이터셋 경로로 수정해야 합니다.
+
 **2. CMake 빌드 (Windows)**
 ```bash
 mkdir build && cd build
@@ -262,6 +269,8 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake \
          -DOpenCV_DIR="C:/Users/{사용자}/Downloads/opencv/build/x64/vc16/lib"
 cmake --build . --config Release
 ```
+
+> 참고: 현재 CMake 설정은 Windows/MSVC 기준 옵션(`/utf-8`)을 포함합니다. macOS/clang에서는 이 옵션 때문에 그대로 빌드되지 않을 수 있습니다.
 
 **3. 실행**
 ```bash
