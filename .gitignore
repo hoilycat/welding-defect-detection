@@ -5,6 +5,7 @@ config.json
 *.png
 *.xml
 Day*_개발일지_*.md
+docs/development-log-*.md
 result.json
 svm_model.xml
 Ultralytics/
