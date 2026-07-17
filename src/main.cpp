@@ -5,23 +5,32 @@
 #include <fstream>
 #include <vector>
 #include <filesystem>
-#include <windows.h>
 #include <algorithm>
 #include <numeric>
 #include <random>
 #include <iomanip>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 // ── 유틸 ─────────────────────────────────────────────────────────────────────
 
-std::wstring to_wide(const std::string& utf8) {
-    if (utf8.empty()) return L"";
+fs::path pathFromUtf8(const std::string& utf8) {
+#ifdef _WIN32
+    if (utf8.empty()) return fs::path{};
     int size = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
-    std::wstring wide(size - 1, L'\0');
+    if (size <= 0) return fs::path{};
+    std::wstring wide(size, L'\0');
     MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wide[0], size);
-    return wide;
+    wide.pop_back();
+    return fs::path(wide);
+#else
+    return fs::path(utf8);
+#endif
 }
 
 json loadConfig() {
@@ -49,8 +58,8 @@ const std::vector<std::string> CLASS_NAMES = {"crack", "porosity", "fusion", "sl
 cv::Scalar caseColor(const std::string& s) {
     if (s == "crack")    return cv::Scalar(0, 0, 255);   // 빨강
     if (s == "porosity") return cv::Scalar(0, 255, 0);   // 초록
-    if (s == "fusion")   return cv::Scalar(255, 0, 0);   // 파랑
-    if (s == "slag")     return cv::Scalar(0, 255, 255); // 노랑
+    if (s == "lack of fusion" || s == "fusion") return cv::Scalar(255, 0, 0);   // 파랑
+    if (s == "slag inclusion" || s == "slag")   return cv::Scalar(0, 255, 255); // 노랑
     return cv::Scalar(255, 255, 255);
 }
 
@@ -93,14 +102,14 @@ std::vector<float> extractFeatures(const cv::Mat& gray, const std::vector<cv::Po
 
 // ── 시각화 모드 ───────────────────────────────────────────────────────────────
 
-void processImage(const std::string& img_path, const fs::path& json_path) {
+void processImage(const fs::path& img_path, const fs::path& json_path) {
     std::ifstream img_file(img_path, std::ios::binary);
     std::vector<char> buf(std::istreambuf_iterator<char>(img_file), {});
     cv::Mat img = cv::imdecode(cv::Mat(buf), cv::IMREAD_COLOR);
-    if (img.empty()) { std::cout << "로드 실패: " << img_path << std::endl; return; }
+    if (img.empty()) { std::cout << "로드 실패: " << img_path.u8string() << std::endl; return; }
 
     std::ifstream jf(json_path);
-    if (!jf.is_open()) { std::cout << "JSON 없음: " << json_path << std::endl; return; }
+    if (!jf.is_open()) { std::cout << "JSON 없음: " << json_path.u8string() << std::endl; return; }
     json j; jf >> j;
 
     cv::Mat gray, clahe_out, blurred, edges;
@@ -142,7 +151,7 @@ void processImage(const std::string& img_path, const fs::path& json_path) {
     cv::vconcat(top, bottom, result);
     cv::resize(result, result, {}, 0.5, 0.5);
 
-    std::cout << "파일: " << img_path << " | 결함: " << cnt << std::endl;
+    std::cout << "파일: " << img_path.u8string() << " | 결함: " << cnt << std::endl;
     cv::imshow("Welding Defect Viewer", result);
     cv::waitKey(0);
 }
@@ -152,16 +161,17 @@ void processImage(const std::string& img_path, const fs::path& json_path) {
 int collectFromFolder(const fs::path& img_dir, const fs::path& json_dir,
                       std::vector<std::vector<float>>& all_feats,
                       std::vector<int>& all_labels) {
-    if (GetFileAttributesW(img_dir.wstring().c_str()) == INVALID_FILE_ATTRIBUTES) {
-        std::wcout << L"  [경고] 폴더 없음: " << img_dir.wstring() << std::endl;
+    if (!fs::exists(img_dir) || !fs::is_directory(img_dir)) {
+        std::cout << "  [경고] 폴더 없음: " << img_dir.u8string() << std::endl;
         return 0;
     }
     int count = 0;
     for (auto& entry : fs::directory_iterator(img_dir)) {
         if (entry.path().extension() != ".jpg") continue;
 
-        std::string filename = entry.path().stem().string();
-        fs::path json_path   = json_dir / (filename + ".json");
+        fs::path json_filename = entry.path().filename();
+        json_filename.replace_extension(".json");
+        fs::path json_path = json_dir / json_filename;
 
         // 이미지 로드 (한글 경로 대응)
         std::ifstream img_file(entry.path(), std::ios::binary);
@@ -205,24 +215,24 @@ int collectFromFolder(const fs::path& img_dir, const fs::path& json_dir,
 void trainAndEvaluate(const std::string& data_dir, const std::string& label_dir) {
     const int NUM_CLASSES = 4;
 
-    struct FolderPair { std::wstring img; std::wstring lbl; };
+    struct FolderPair { fs::path img; fs::path lbl; };
     std::vector<FolderPair> folders = {
-        {L"TS_RTAL_결함_1. 균열",      L"TL_RTAL_결함_1. 균열"},
-        {L"TS_RTAL_결함_2. 기공",      L"TL_RTAL_결함_2. 기공"},
-        {L"TS_RTAL_결함_3. 융합불량",   L"TL_RTAL_결함_3. 융합불량"},
-        {L"TS_RTAL_결함_4. 슬래그혼입", L"TL_RTAL_결함_4. 슬래그혼입"},
+        {pathFromUtf8(u8"TS_RTAL_결함_1. 균열"),      pathFromUtf8(u8"TL_RTAL_결함_1. 균열")},
+        {pathFromUtf8(u8"TS_RTAL_결함_2. 기공"),      pathFromUtf8(u8"TL_RTAL_결함_2. 기공")},
+        {pathFromUtf8(u8"TS_RTAL_결함_3. 융합불량"),   pathFromUtf8(u8"TL_RTAL_결함_3. 융합불량")},
+        {pathFromUtf8(u8"TS_RTAL_결함_4. 슬래그혼입"), pathFromUtf8(u8"TL_RTAL_결함_4. 슬래그혼입")},
     };
 
     std::vector<std::vector<float>> all_feats;
     std::vector<int> all_labels;
 
-    fs::path base_img = fs::path(to_wide(data_dir));
-    fs::path base_lbl = fs::path(to_wide(label_dir));
+    fs::path base_img = pathFromUtf8(data_dir);
+    fs::path base_lbl = pathFromUtf8(label_dir);
 
     std::cout << "\n[데이터 수집 중...]\n";
     for (auto& fp : folders) {
         int n = collectFromFolder(base_img / fp.img, base_lbl / fp.lbl, all_feats, all_labels);
-        std::wcout << L"  " << fp.img << L" → " << n << L"개 샘플" << std::endl;
+        std::cout << "  " << fp.img.u8string() << " → " << n << "개 샘플" << std::endl;
     }
 
     if (all_feats.empty()) {
@@ -370,7 +380,9 @@ void trainAndEvaluate(const std::string& data_dir, const std::string& label_dir)
 // ── main ──────────────────────────────────────────────────────────────────────
 
 int main() {
+#ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+#endif
     auto cfg = loadConfig();
     std::string data_dir  = cfg["data_dir"];
     std::string label_dir = cfg["label_dir"];
@@ -380,17 +392,22 @@ int main() {
     std::cout << "==============================\n";
     std::cout << "  1. 시각화 (이미지 뷰어)\n";
     std::cout << "  2. SVM 학습 + 평가\n";
-    std::cout << "> ";
+    std::cout << "> " << std::flush;
     int mode; std::cin >> mode;
 
     if (mode == 1) {
-        fs::path img_dir  = fs::path(to_wide(data_dir))  / L"TS_RTAL_결함_1. 균열";
-        fs::path json_dir = fs::path(to_wide(label_dir)) / L"TL_RTAL_결함_1. 균열";
+        fs::path img_dir  = pathFromUtf8(data_dir)  / fs::path(u8"TS_RTAL_결함_1. 균열");
+        fs::path json_dir = pathFromUtf8(label_dir) / fs::path(u8"TL_RTAL_결함_1. 균열");
+        if (!fs::exists(img_dir) || !fs::is_directory(img_dir)) {
+            std::cerr << "이미지 폴더가 없습니다: " << img_dir.u8string() << std::endl;
+            return 1;
+        }
         for (auto& entry : fs::directory_iterator(img_dir)) {
             if (entry.path().extension() == ".jpg") {
-                std::string img_path = entry.path().string();
-                fs::path json_path   = json_dir / (entry.path().stem().string() + ".json");
-                processImage(img_path, json_path);
+                fs::path json_filename = entry.path().filename();
+                json_filename.replace_extension(".json");
+                fs::path json_path = json_dir / json_filename;
+                processImage(entry.path(), json_path);
             }
         }
     } else if (mode == 2) {

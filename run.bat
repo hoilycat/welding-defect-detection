@@ -1,5 +1,5 @@
 @echo off
-set PATH=%PATH%;C:/Users/iopuh/Downloads/opencv/build/x64/vc16/bin
-cd /d D:/welding-defect-detection
+cd /d "%~dp0"
+if defined OPENCV_BIN set "PATH=%PATH%;%OPENCV_BIN%"
 build\Release\main.exe
 pause
