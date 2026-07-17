@@ -1,170 +1,322 @@
-# WeldVision
+<div align="center">
 
-용접 X-ray 이미지에서 결함을 분석하는 컴퓨터 비전 프로젝트입니다.
+# 🔥 WeldVision
+### C++ OpenCV 기반 용접 결함 특징 추출 및 SVM 분류 실험
 
-현재 프로젝트는 1단계 C++ OpenCV 기반 특징 분석 실험에서 시작해, 2단계 Python/Gradio 기반 해석 대시보드로 확장 중입니다.
+![Now](https://img.shields.io/badge/🔴%20현재-Stage%201%20C%2B%2B%20%7C%20OpenCV-red?style=for-the-badge)
+![Next](https://img.shields.io/badge/🟠%20다음-Stage%202%20Python%20%7C%20YOLOv8-orange?style=for-the-badge)
+![Status](https://img.shields.io/badge/Stage%201-SVM%20Experiment-yellow?style=for-the-badge)
 
-## 현재 상태
+> C++ 고전비전으로 결함의 물리적 특성을 직접 이해하는 것부터 시작해,  
+> 현재는 GT 폴리곤 라벨을 활용한 특징 추출과 SVM 4클래스 분류를 구현한 단계입니다.  
+> YOLO 검출, 위험도 추론, Gradio 데모는 이후 확장 계획입니다.
 
-| 단계 | 상태 | 설명 |
-|---|---|---|
-| 1단계 | 구현 완료 | C++ OpenCV 기반 특징 추출 및 SVM 분류 실험 |
-| 2단계 | 1차 구현 | Gradio 대시보드, OpenCV 전처리 근거 화면, 위험도/원인 추론 |
-| 다음 단계 | 예정 | YOLOv8 학습 모델 연결 및 실제 결함 검출 |
+</div>
 
-## 프로젝트 목표
+---
 
-단순히 결함을 분류하는 것에서 끝나지 않고, 결함의 위치와 종류, 위험도, 추정 원인, 권장 조치를 함께 제공하는 용접 품질 검사 보조 시스템을 만드는 것이 목표입니다.
+## 🗺️ 전체 로드맵
 
-최종 목표 흐름은 다음과 같습니다.
+```mermaid
+flowchart LR
+    subgraph S1["🔴 1단계 — C++ OpenCV + SVM 실험 (현재)"]
+        A[📷 X-ray 이미지 + JSON 라벨 입력] --> B[전처리\nGrayscale · CLAHE]
+        B --> C[GT 폴리곤 마스크 생성]
+        C --> D[특징 추출\n원형도 · 종횡비 · 밝기 · 면적]
+        D --> E[SVM 분류기]
+        E --> F[✅ 정확도 + Confusion Matrix]
+    end
 
-```text
-YOLOv8 결함 검출
-→ OpenCV 특징 분석
-→ 위험도 스코어링
-→ 원인 추론
-→ Gradio 대시보드 시각화
+    subgraph S2["🟠 2단계 — 검출/데모 확장 계획"]
+        G[📷 이미지 업로드] --> H[YOLOv8 검출\n결함 위치 · 종류]
+        H --> I[1단계 특징분석 재활용\n원형도 · 종횡비 · 밝기]
+        I --> J[위험도 스코어링\n+ 원인추론 룰]
+        J --> K[🖥️ Gradio 데모\nHuggingFace Spaces]
+    end
+
+    D -- "특징 설계 자산 그대로 이어받음" --> I
+    F -- "도메인 지식 축적" --> H
+
+    style S1 fill:#2d1f1f,stroke:#ff4444,color:#fff
+    style S2 fill:#2d1f0f,stroke:#ff8800,color:#fff
 ```
 
-## 1단계: C++ OpenCV + SVM
+---
 
-1단계에서는 제공된 JSON 라벨의 결함 영역을 활용해 OpenCV 기반 특징값을 추출하고, SVM으로 결함 종류를 분류하는 실험을 진행했습니다.
+## 🔴 1단계 — C++ OpenCV + SVM 실험
 
-### 주요 기능
+> **목표:** 용접 X-ray 이미지와 JSON 폴리곤 라벨에서 특징을 추출하고 SVM으로 결함 종류를 분류  
+> **현재 범위:** 자동 검출이 아니라, 제공된 GT 폴리곤 라벨을 이용한 특징 기반 분류 실험
 
-- X-ray 이미지 로드
-- JSON 라벨 파싱
-- 결함 영역 마스크 생성
-- OpenCV 전처리
-- 특징값 추출
-- SVM 학습 및 평가
-- Confusion Matrix 기반 성능 확인
+### 왜 고전비전인가?
+- 산업 현장 검사 시스템 상당수가 룰베이스 OpenCV C++ — 실무 직결
+- 결함의 물리적 특성을 직접 수식으로 이해 → 2단계 원인추론의 씨앗
 
-### 사용한 특징값
+### 처리 파이프라인
 
-| 특징값 | 설명 |
-|---|---|
-| 원형도 (Circularity) | 기공처럼 둥근 결함 판단에 사용 |
-| 종횡비 (Aspect Ratio) | 균열처럼 길쭉한 결함 판단에 사용 |
-| 평균 밝기 (Mean Brightness) | 결함 영역의 어두운 정도 확인 |
-| 밝기 표준편차 (Brightness Std) | 결함 내부의 밝기 변화 확인 |
-| 면적 비율 (Area Ratio) | 전체 이미지 대비 결함 크기 확인 |
+```mermaid
+flowchart TD
+    A["📁 입력 JPG + JSON 라벨"] --> B
 
-## 2단계: Gradio 해석 대시보드
+    B["① 전처리\nGrayscale → CLAHE"]
+    B --> C["② GT 폴리곤 마스크 생성\nJSON annotations 사용"]
+    C --> D["③ 특징 추출 ⭐\n원형도 · 종횡비\n밝기 평균/표준편차 · 정규화 면적"]
+    D --> E["④ SVM 분류\ncv::ml::SVM"]
+    E --> F["⑤ 평가\n정확도 + Confusion Matrix"]
 
-2단계에서는 YOLOv8 모델을 연결하기 전에, 먼저 결과를 설명하고 시각화할 수 있는 Gradio 기반 대시보드를 구축했습니다.
+    G["🩻 결함 유형별 특징"]
+    G --> G1["기공 Porosity\n→ 원형도 높음 🔴"]
+    G --> G2["균열 Crack\n→ 종횡비 큼 🔴"]
+    G --> G3["융합불량 Lack of fusion\n→ 형상/밝기 특징"]
+    G --> G4["슬래그혼입 Slag inclusion\n→ 형상/밝기 특징"]
 
-현재 2단계는 **YOLOv8 전 단계**입니다.
-즉, 아직 학습된 `best.pt` 모델이 연결된 상태는 아닙니다.
+    D -. "물리적 의미 매핑" .-> G
 
-모델 경로가 비어 있을 경우에는 OpenCV 기반 후보 검출 모드가 동작합니다. 이 박스는 최종 AI 판정이 아니라, 전처리 결과에서 어두운 결함 후보를 확인하기 위한 보조 표시입니다.
+    style A fill:#1a1a2e,stroke:#ff4444,color:#fff
+    style D fill:#2d1f1f,stroke:#ff8800,color:#fff
+    style G fill:#1a1a1a,stroke:#ffcc00,color:#fff
+```
 
-### 주요 기능
+### 데이터셋
+- 방사선 용접 이미지와 JSON 폴리곤 라벨을 사용합니다.
+- 현재 코드의 학습 대상 4클래스: crack / porosity / lack of fusion / slag inclusion
+- `normal`/`ND` 클래스는 현재 SVM 학습 코드에 포함되어 있지 않습니다.
+
+### 진행 현황
+
+| Day | 내용 | 상태 |
+|-----|------|------|
+| 1 | OpenCV C++ 환경설정 + 이미지 출력 | ✅ |
+| 2~3 | 한글 경로 처리 + JSON 파싱 + 폴리곤 시각화 | ✅ |
+| 4 | 전처리 파이프라인 (grayscale, CLAHE, Canny 시각화) | ✅ |
+| 5 | GT 폴리곤 시각화 + 바운딩 박스/형상 실험 | ✅ |
+| 6 | 특징 추출 (원형도, 종횡비, 밝기 통계, 정규화 면적) | ✅ |
+| 7 | 규칙 기반 분류기 + putText | ✅ |
+| 8 | 배치 처리 (컨투어 디버깅 중) | ✅ |
+| 9 | GT 폴리곤 시각화 + 멀티뷰 (CLAHE·Canny·GT) | ✅ |
+| **10** | **SVM 학습 + 정확도 86.2% (4클래스)** | **👈 여기까지** |
+| 11 | Confusion Matrix 분석 + 클래스 불균형 개선 | 일부 구현 / 개선 예정 |
+| 12 | README polish + 지원 완료 | 🔜 |
+
+---
+
+## 🟠 2단계 계획 — 검출/해석/데모 확장
+
+> **목표:** 검출 + 위험도 해석 + 대시보드  
+> **상태:** 아직 구현 전 계획입니다. 현재 저장소에는 YOLOv8 학습/추론 코드와 Gradio 앱이 없습니다.
+
+### 위험도 스코어링 아이디어
+
+| 결함 종류 | 위험도 | 권장 조치 | 1단계 특징 연결 | 주요 원인 |
+|-----------|--------|-----------|----------------|-----------|
+| 균열 Crack | 🔴 100 | 즉시 재작업 | 종횡비 큼 | 냉각 속도 너무 빠름 |
+| 용입불량 LP | 🔴 80 | 재검사 | 어두운 직선 띠 | 전류 너무 낮음 |
+| 언더컷 | 🟠 60 | 보수 용접 | 가장자리 형상 | 전류 너무 높음 · 속도 빠름 |
+| 기공 Porosity | 🟡 50 | 주의 관찰 | 원형도 높음 | 습기 · 가스 혼입 |
+| 슬래그혼입 | 🟡 40 | 경미한 결함 | 밝기·텍스처 이상 | 이전 층 청소 미흡 |
+
+### 2단계 흐름
+
+```mermaid
+flowchart LR
+    A[📷 이미지 업로드] --> B["YOLOv8 검출\n'여기 결함, 종류=○○'"]
+    B --> C["1단계 특징분석\n원형도 · 종횡비 · 밝기"]
+    C --> D["위험도 스코어링\n+ 원인추론 룰베이스"]
+    D --> E["🖥️ Gradio 데모\nHuggingFace Spaces"]
+
+    style B fill:#2d1f0f,stroke:#ff8800,color:#fff
+    style C fill:#2d1f1f,stroke:#ff4444,color:#fff
+    style E fill:#0f2d1f,stroke:#44ff88,color:#fff
+```
+
+### 2단계 1차 구현 현황 — Gradio 해석 대시보드
+
+> **상태:** YOLOv8 학습 모델 연결 전 단계입니다.
+> 현재는 `phase2/` 폴더에 Gradio 기반 해석 대시보드와 OpenCV 전처리 시각화 기능을 먼저 구현했습니다.
+
+이번 구현은 최종 YOLO 검출 모델을 붙이기 전에, 검출 결과를 어떻게 설명하고 보여줄지 먼저 설계한 단계입니다.
+
+현재 포함된 기능:
 
 - 이미지 업로드
-- 원본 이미지 표시
-- 결함 후보 시각화
-- OpenCV 전처리 근거 화면 제공
-- 슬라이더 기반 실시간 재분석
-- 특징값 표 출력
-- 위험도 점수 출력
+- 원본 이미지와 후보 검출 결과 비교
+- OpenCV 전처리 근거 화면 제공: CLAHE, Black-hat, Gradient, Emboss
+- 슬라이더 기반 자동 재분석
+- 특징값 출력: Circularity, Aspect Ratio, Mean Brightness
+- 결함별 위험도 점수 출력
 - 추정 원인 및 권장 조치 출력
 - 한글 UI + 영어 기술명 병기
 
-### 전처리 화면
+현재 `YOLOv8 모델 경로`가 비어 있으면 OpenCV 기반 후보 검출 모드가 동작합니다.
+이때 표시되는 박스는 최종 AI 판정이 아니라, Black-hat 전처리에서 강조된 어두운 영역을 확인하기 위한 보조 후보입니다.
 
-| 전처리 | 역할 |
-|---|---|
-| CLAHE | 국소 대비를 강화해 흐릿한 결함을 보기 쉽게 함 |
-| Black-hat | 밝은 배경 위의 어두운 결함 후보를 강조 |
-| Gradient | 선형 결함, 방향성, 경계 변화를 강조 |
-| Emboss | 기공과 슬래그 혼입처럼 질감이 중요한 패턴을 강조 |
-
-Canny는 핵심 검출 방식에서 제외했습니다.
-
-이유는 용접부 이미지에서 Canny가 결함뿐 아니라 비드 질감, 노이즈, 스크래치까지 경계로 잡아 과검출될 가능성이 크기 때문입니다.
-
-### 위험도 및 원인 추론
-
-| 결함 | 위험도 | 권장 조치 |
-|---|---:|---|
-| 균열 (Crack) | 100 | 즉시 재작업 |
-| 용입불량 (Lack of Fusion) | 80 | 재검사 또는 보수 용접 |
-| 언더컷 (Undercut) | 60 | 보수 용접 |
-| 기공 (Porosity) | 50 | 주의 관찰, 밀집 시 재검사 |
-| 슬래그 혼입 (Slag Inclusion) | 40 | 크기와 위치에 따라 추가 확인 또는 경미 보수 |
-
-## 1단계 자산 재사용
-
-2단계는 1단계를 버리고 새로 만든 것이 아니라, 1단계에서 만든 특징 분석 개념을 해석 로직으로 재사용합니다.
-
-| 1단계 자산 | 2단계 활용 |
-|---|---|
-| 용접 결함 도메인 지식 | 위험도 기준과 원인 추론 룰 설계 |
-| 원형도 분석 | 기공 판단 보조 |
-| 종횡비 분석 | 균열, 슬래그 혼입, 용입불량 판단 보조 |
-| 밝기 분석 | 어두운 결함 후보 판단 |
-| OpenCV 전처리 경험 | Gradio 대시보드의 전처리 시각화 |
-| Confusion Matrix 평가 | YOLOv8 검출 성능 평가에 재사용 예정 |
-
-## 기술 스택
-
-| 영역 | 기술 |
-|---|---|
-| 1단계 | C++17, OpenCV, CMake, SVM |
-| 2단계 | Python, Gradio, OpenCV, NumPy, Pandas |
-| 예정 | YOLOv8, Ultralytics |
-
-## 프로젝트 구조
-
-```text
-welding-defect-detection/
-├── src/
-│   ├── main.cpp
-│   └── visualize.py
-├── phase2/
-│   ├── gradio_app.py
-│   ├── vision.py
-│   ├── rules.py
-│   ├── requirements.txt
-│   └── README.md
-├── config.json.example
-├── CMakeLists.txt
-├── CMakeLists_win.txt
-├── run.bat
-└── README.md
-```
-
-## 2단계 데모 실행
+실행 방법:
 
 ```bash
 pip install -r phase2/requirements.txt
 python phase2/gradio_app.py
 ```
 
-브라우저에서 다음 주소로 접속합니다.
+접속 주소:
 
 ```text
 http://127.0.0.1:7860
 ```
 
-YOLOv8 학습 모델이 있는 경우, UI의 `YOLOv8 모델 경로`에 다음과 같은 경로를 입력할 수 있습니다.
+다음 단계에서는 RIAWELC 데이터를 YOLO 형식으로 변환하고, YOLOv8 학습 후 `best.pt` 모델을 이 대시보드에 연결할 예정입니다.
 
-```text
-runs/detect/train/weights/best.pt
+---
+
+## 🚀 배포 계획 — HuggingFace Spaces + Gradio
+
+> **목표:** C++ 결과 + YOLOv8 결과를 나란히 보여주는 웹 데모  
+> **상태:** 설계 단계입니다. 현재 구현된 배포 코드는 없습니다.
+
+### 왜 HuggingFace Spaces인가?
+
+HuggingFace Spaces는 Gradio 앱 호스팅과 GPU 옵션을 제공합니다.  
+이후 C++ 결과 시각화를 Python과 연결하기 위해 C++ → JSON → Gradio 파이프라인을 구성할 예정입니다.
+
+### 아키텍처 구상
+
+```mermaid
+flowchart TD
+    subgraph LOCAL["💻 로컬 C++ (1단계 결과)"]
+        A["📷 X-ray 이미지"] --> B["C++ 파이프라인\nCLAHE · 특징추출 · SVM"]
+        B --> C["📄 result.json\n{defect_type, bbox, score, feature}"]
+    end
+
+    subgraph HF["☁️ HuggingFace Spaces (배포)"]
+        D["📤 이미지 업로드\n(Gradio UI)"] --> E["YOLOv8 추론\nPython · Ultralytics"]
+        E --> F["결과 병합\nC++ JSON + YOLO 결과"]
+        C --> F
+        F --> G["🖥️ Gradio 출력\n좌: C++ 분석 / 우: YOLO 검출"]
+        G --> H["📊 위험도 스코어\n+ 원인 추론 텍스트"]
+    end
+
+    style LOCAL fill:#2d1f1f,stroke:#ff4444,color:#fff
+    style HF fill:#1f1f2d,stroke:#8800ff,color:#fff
+    style G fill:#0f2d1f,stroke:#44ff88,color:#fff
 ```
 
-## 다음 작업
+### C++ → JSON 출력 포맷
 
-- RIAWELC 데이터를 YOLO 형식으로 변환
-- YOLOv8 학습
-- `best.pt` 모델 생성
-- Gradio UI에 YOLOv8 추론 연결
-- 검출 성능 평가
-- 포트폴리오 사이트에 프로젝트 설명 및 화면 추가
+현재 코드는 SVM 평가 결과를 `result.json`으로 저장합니다. 아래 포맷은 이후 이미지별 검출 결과와 연동하기 위한 설계 예시입니다.
 
-## 면접 설명 포인트
+```json
+{
+  "filename": "KakaoTalk_Image_2025.jpg",
+  "defects": [
+    {
+      "type": "crack",
+      "bbox": [120, 340, 200, 380],
+      "circularity": 0.21,
+      "aspect_ratio": 4.5,
+      "mean_brightness": 89.3,
+      "svm_score": 0.91
+    }
+  ],
+  "stage": "cpp_classical_vision"
+}
+```
 
-이 프로젝트는 단순 분류 모델이 아니라, 결함 검출 결과를 사람이 이해할 수 있도록 해석하는 용접 검사 보조 시스템입니다.
+### Gradio UI 설계 예시
 
-1단계에서는 C++ OpenCV로 결함의 형태적 특징을 직접 추출했고, 2단계에서는 그 특징값을 위험도와 원인 추론에 재사용하도록 확장했습니다. YOLOv8은 결함 위치와 종류를 검출하는 역할을 맡고, OpenCV 특징 분석은 검출 결과의 근거를 설명하는 역할을 맡도록 설계했습니다.
+```python
+import gradio as gr
+
+with gr.Blocks(title="WeldVision", theme=gr.themes.Soft()) as demo:
+    gr.Markdown("# 🔥 WeldVision — 용접 결함 검출 데모")
+    gr.Markdown("X-ray 이미지를 업로드하면 C++ 분석 결과 + YOLOv8 검출 결과를 비교합니다.")
+
+    with gr.Row():
+        with gr.Column():
+            img_input = gr.Image(label="📷 X-ray 이미지 업로드", type="filepath")
+            run_btn = gr.Button("🔍 검출 시작", variant="primary")
+
+        with gr.Column():
+            cpp_output  = gr.Image(label="🔴 C++ 분석 (GT 폴리곤 + 특징)")
+            yolo_output = gr.Image(label="🟠 YOLOv8 검출")
+
+    with gr.Row():
+        result_text = gr.Textbox(label="📊 결함 요약 + 위험도", lines=4)
+
+    run_btn.click(fn=predict, inputs=img_input,
+                  outputs=[cpp_output, yolo_output, result_text])
+```
+
+| 영역 | 내용 |
+|------|------|
+| 좌상단 | 이미지 업로드 + 검출 버튼 |
+| 우상단 | C++ 분석 결과 / YOLOv8 검출 결과 나란히 |
+| 하단 | 결함 요약 + 위험도 스코어 텍스트 |
+| 추가 | 결함 원인 진단 ("이 결함은 이런 원인으로 생겼을 가능성이 높습니다") |
+
+### 배포 단계
+
+| 단계 | 내용 |
+|------|------|
+| ① | C++ SVM 완성 → JSON 출력 기능 추가 |
+| ② | YOLOv8 파인튜닝 (용접 데이터셋 학습) |
+| ③ | Gradio 앱 작성 (JSON 읽기 + YOLO 추론 + 시각화) |
+| ④ | HuggingFace Spaces `gradio` SDK로 배포 |
+| ⑤ | C++ 결과 / YOLO 결과 나란히 비교 데모 완성 |
+
+---
+
+## 🛠️ 기술 스택
+
+| 단계 | 기술 |
+|------|------|
+| 1단계 | C++17, OpenCV, CMake, vcpkg, nlohmann_json |
+| 2단계 계획 | Python, YOLOv8 (Ultralytics), Plotly |
+| 배포 계획 | Gradio, HuggingFace Spaces, C++→JSON 브리지 |
+
+## 📁 프로젝트 구조
+
+```
+welding-defect-detection/
+├── src/
+│   ├── main.cpp          # 메인 처리 파이프라인
+│   └── visualize.py      # Python 라벨 시각화 실험 코드
+├── config.json           # 로컬 경로 설정 (현재 저장소에 포함됨)
+├── config.json.example   # 경로 설정 예시
+├── CMakeLists.txt        # 빌드 설정
+├── CMakeLists_win.txt    # 이전 Windows용 CMake 설정
+├── run.bat               # Windows 실행 배치파일
+└── README.md
+```
+
+## ⚙️ 빌드 및 실행
+
+**1. config.json 생성**
+```bash
+cp config.json.example config.json
+# config.json 열어서 본인 경로로 수정
+```
+
+> 참고: 현재 저장소에는 `config.json`도 함께 포함되어 있습니다. 다른 환경에서 실행하려면 `data_dir`, `label_dir`를 본인 데이터셋 경로로 수정해야 합니다.
+
+**2. CMake 빌드 (Windows)**
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake \
+         -DVCPKG_TARGET_TRIPLET=x64-windows \
+         -DOpenCV_DIR="C:/Users/{사용자}/Downloads/opencv/build/x64/vc16/lib"
+cmake --build . --config Release
+```
+
+> 참고: 현재 CMake 설정은 Windows/MSVC 기준 옵션(`/utf-8`)을 포함합니다. macOS/clang에서는 이 옵션 때문에 그대로 빌드되지 않을 수 있습니다.
+
+**3. 실행**
+```bash
+# run.bat 더블클릭 또는
+$env:PATH += ";C:/Users/{사용자}/Downloads/opencv/build/x64/vc16/bin"
+./build/Release/main.exe
+```
+
+---
+
+<div align="center">
+  <sub>🔥 불똥처럼 — 작은 불꽃에서 시작해서 크게 번진다</sub>
+</div>
