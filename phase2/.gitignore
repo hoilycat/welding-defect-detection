@@ -1,0 +1,5 @@
+.packages/
+.ultralytics/
+yolo_config/
+__pycache__/
+*.pyc
