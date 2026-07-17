@@ -103,7 +103,7 @@ flowchart TD
 ## 🟠 2단계 계획 — 검출/해석/데모 확장
 
 > **목표:** 검출 + 위험도 해석 + 대시보드  
-> **상태:** 아직 구현 전 계획입니다. 현재 저장소에는 YOLOv8 학습/추론 코드와 Gradio 앱이 없습니다.
+> **상태:** YOLOv8 학습/추론은 아직 예정 단계입니다. Gradio 기반 해석 대시보드는 `phase2-gradio-dashboard` 브랜치에서 1차 구현했습니다.
 
 ### 위험도 스코어링 아이디어
 
@@ -128,6 +128,28 @@ flowchart LR
     style C fill:#2d1f1f,stroke:#ff4444,color:#fff
     style E fill:#0f2d1f,stroke:#44ff88,color:#fff
 ```
+
+### 2단계 1차 구현 현황 — Gradio 해석 대시보드
+
+> 구현 브랜치: `phase2-gradio-dashboard`
+> 현재 main에는 2단계 계획과 구현 현황을 기록하고, 실제 Gradio 대시보드 코드는 별도 브랜치에서 관리 중입니다.
+
+YOLOv8 학습 모델을 연결하기 전에, 먼저 검출 결과를 설명하고 시각화할 수 있는 Gradio 기반 해석 대시보드를 1차 구현했습니다.
+
+현재 포함된 기능:
+
+- 이미지 업로드
+- 원본 이미지와 후보 검출 결과 비교
+- OpenCV 전처리 근거 화면 제공: CLAHE, Black-hat, Gradient, Emboss
+- 슬라이더 기반 자동 재분석
+- 특징값 출력: Circularity, Aspect Ratio, Mean Brightness
+- 결함별 위험도 점수 출력
+- 추정 원인 및 권장 조치 출력
+- 한글 UI + 영어 기술명 병기
+
+현재 `YOLOv8 모델 경로`가 비어 있으면 OpenCV 기반 후보 검출 모드가 동작합니다. 이때 표시되는 박스는 최종 AI 판정이 아니라, Black-hat 전처리에서 강조된 어두운 영역을 확인하기 위한 보조 후보입니다.
+
+다음 단계에서는 RIAWELC 데이터를 YOLO 형식으로 변환하고, YOLOv8 학습 후 `best.pt` 모델을 대시보드에 연결할 예정입니다.
 
 ---
 
