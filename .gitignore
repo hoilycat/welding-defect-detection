@@ -1,9 +1,11 @@
 build/
+.venv/
 config.json
 .vscode/c_cpp_properties.json
 *.jpg
 *.png
 *.xml
+*.pt
 Day*_개발일지_*.md
 docs/development-log-*.md
 result.json

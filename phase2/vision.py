@@ -101,9 +101,13 @@ def detect_with_yolo(
     if not path.exists():
         return []
 
-    config_dir = Path(__file__).resolve().parent / "yolo_config"
+    phase2_dir = Path(__file__).resolve().parent
+    config_dir = phase2_dir / "yolo_config"
+    cache_dir = phase2_dir / ".cache"
     config_dir.mkdir(exist_ok=True)
     os.environ.setdefault("YOLO_CONFIG_DIR", str(config_dir))
+    os.environ.setdefault("MPLCONFIGDIR", str(cache_dir / "matplotlib"))
+    os.environ.setdefault("XDG_CACHE_HOME", str(cache_dir))
 
     try:
         from ultralytics import YOLO
