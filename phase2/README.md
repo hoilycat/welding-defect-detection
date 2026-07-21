@@ -130,3 +130,7 @@ python phase2/train_yolo.py --epochs 50
 ```
 
 The trained model is written below `phase2/runs/<name>/weights/best.pt`. Enter that path in the Gradio dashboard to use YOLO detections instead of the OpenCV-only candidate mode.
+
+## Pilot Result
+
+The first larger pipeline check used 1,500 training images and 1,368 validation images for 10 epochs on Apple MPS. It reached 0.421 precision, 0.390 recall, 0.358 mAP50, and 0.156 mAP50-95. This is a pilot result, not the final production model. See [the pilot training report](../docs/yolo-pilot-training-2026-07-21.md) for class-level metrics and limitations.
