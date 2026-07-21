@@ -89,3 +89,44 @@ OK: 1 fallback candidate(s) detected: crack
 ```
 
 The fallback result is a visual candidate, not a final AI judgment. It is intended to prove that the Phase 2 UI, preprocessing views, feature extraction, and rule-based explanation path work before the YOLOv8 detector is connected.
+
+## Prepare the RIAWELC YOLO Dataset
+
+The source JSON stores defect polygons. The converter turns each polygon into a YOLO bounding box and supports both the extracted Training folders and the zipped Validation folders. Normal images are retained as negative samples with empty label files.
+
+Create a small balanced dataset first:
+
+```bash
+python phase2/prepare_yolo_dataset.py \
+  --data-root "/path/to/3.개방데이터/1.데이터" \
+  --output phase2/yolo_dataset_smoke \
+  --limit-per-folder 5
+```
+
+The six detection classes are `crack`, `porosity`, `lack_of_fusion`, `slag_inclusion`, `incomplete_penetration`, and `undercut`. Training images are symlinked by default so the 41 GB source dataset is not duplicated. Validation images are read directly from the supplied ZIP archives.
+
+After checking the small dataset, omit `--limit-per-folder` to convert the full dataset:
+
+```bash
+python phase2/prepare_yolo_dataset.py \
+  --data-root "/path/to/3.개방데이터/1.데이터"
+```
+
+## Train YOLOv8
+
+Run a one-epoch pipeline check on the small dataset:
+
+```bash
+python phase2/train_yolo.py \
+  --data phase2/yolo_dataset_smoke/dataset.yaml \
+  --epochs 1 \
+  --name smoke
+```
+
+Start the main training run after the pipeline check:
+
+```bash
+python phase2/train_yolo.py --epochs 50
+```
+
+The trained model is written below `phase2/runs/<name>/weights/best.pt`. Enter that path in the Gradio dashboard to use YOLO detections instead of the OpenCV-only candidate mode.
