@@ -73,3 +73,19 @@ runs/detect/train/weights/best.pt
 ```
 
 If no model is provided, the app still runs with an OpenCV candidate detector so preprocessing and rule-based explanation can be demonstrated.
+
+## YOLO-less Smoke Test
+
+The current demo can be checked before a YOLOv8 model is trained or installed. The smoke test creates a synthetic weld-like image, runs the OpenCV fallback detector, extracts feature values, and writes demo output images if a save directory is provided.
+
+```bash
+python phase2/smoke_test.py --save-dir phase2/demo_outputs
+```
+
+Expected result:
+
+```text
+OK: 1 fallback candidate(s) detected: crack
+```
+
+The fallback result is a visual candidate, not a final AI judgment. It is intended to prove that the Phase 2 UI, preprocessing views, feature extraction, and rule-based explanation path work before the YOLOv8 detector is connected.

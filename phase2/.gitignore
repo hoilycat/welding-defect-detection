@@ -1,5 +1,6 @@
 .packages/
 .ultralytics/
 yolo_config/
+demo_outputs/
 __pycache__/
 *.pyc
