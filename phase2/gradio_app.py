@@ -7,6 +7,15 @@ LOCAL_PACKAGES = Path(__file__).resolve().parent / ".packages"
 if LOCAL_PACKAGES.exists():
     sys.path.insert(0, str(LOCAL_PACKAGES))
 
+DEFAULT_MODEL_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "runs"
+    / "detect"
+    / "rt-pilot-v2"
+    / "weights"
+    / "best.pt"
+)
+
 import pandas as pd
 
 import gradio as gr
@@ -122,6 +131,7 @@ def analyze_image(
     image,
     model_path,
     confidence_threshold,
+    include_review_candidates,
     clahe_clip,
     blackhat_kernel,
     dark_threshold,
@@ -143,7 +153,12 @@ def analyze_image(
         sharpen_amount=sharpen_amount,
     )
 
-    detections = detect_with_yolo(image, model_path, confidence_threshold)
+    detections = detect_with_yolo(
+        image,
+        model_path,
+        confidence_threshold,
+        include_review_candidates=include_review_candidates,
+    )
     if not detections:
         detections = detect_candidates_from_blackhat(
             views["blackhat"],
@@ -223,16 +238,22 @@ with gr.Blocks(
             with gr.Row(elem_id="model-actions"):
                 model_path = gr.Textbox(
                     label="YOLOv8 모델 경로",
+                    value=str(DEFAULT_MODEL_PATH) if DEFAULT_MODEL_PATH.is_file() else "",
                     placeholder="선택 입력: runs/detect/train/weights/best.pt",
                     scale=3,
                 )
                 run_button = gr.Button("분석 시작", variant="primary", scale=1)
 
+            include_review_candidates = gr.Checkbox(
+                value=False,
+                label="낮은 신뢰도 검토 후보도 표시 (필요할 때만)",
+            )
+
             with gr.Row(elem_id="slider-grid"):
                 confidence_threshold = gr.Slider(
                     0.05,
                     0.95,
-                    value=0.25,
+                    value=0.15,
                     step=0.05,
                     label="YOLO 신뢰도",
                     elem_classes="compact-control",
@@ -331,6 +352,7 @@ with gr.Blocks(
         image_input,
         model_path,
         confidence_threshold,
+        include_review_candidates,
         clahe_clip,
         blackhat_kernel,
         dark_threshold,
@@ -359,6 +381,7 @@ with gr.Blocks(
     for live_component in [
         image_input,
         confidence_threshold,
+        include_review_candidates,
         clahe_clip,
         blackhat_kernel,
         dark_threshold,

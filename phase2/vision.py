@@ -92,7 +92,11 @@ def preprocess_views(
 
 
 def detect_with_yolo(
-    image_rgb: np.ndarray, model_path: str | None, confidence_threshold: float
+    image_rgb: np.ndarray,
+    model_path: str | None,
+    confidence_threshold: float,
+    include_review_candidates: bool = False,
+    review_threshold: float = 0.05,
 ) -> list[Detection]:
     if not model_path:
         return []
@@ -111,7 +115,20 @@ def detect_with_yolo(
         return []
 
     model = YOLO(str(path))
-    results = model.predict(image_rgb, conf=float(confidence_threshold), verbose=False)
+    prediction_threshold = (
+        min(float(confidence_threshold), float(review_threshold))
+        if include_review_candidates
+        else float(confidence_threshold)
+    )
+    # Ultralytics expects OpenCV-style BGR when a NumPy array is supplied.
+    image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+    results = model.predict(
+        image_bgr,
+        conf=prediction_threshold,
+        iou=0.45,
+        agnostic_nms=False,
+        verbose=False,
+    )
     if not results:
         return []
 
@@ -131,7 +148,11 @@ def detect_with_yolo(
                 label=label,
                 confidence=conf,
                 bbox=(int(xyxy[0]), int(xyxy[1]), int(xyxy[2]), int(xyxy[3])),
-                source="YOLOv8",
+                source=(
+                    "YOLOv8 review candidate"
+                    if conf < float(confidence_threshold)
+                    else "YOLOv8"
+                ),
             )
         )
     return detections
@@ -243,10 +264,13 @@ def draw_detections(image_rgb: np.ndarray, detections: list[Detection]) -> np.nd
         rule = explain_detection(det.label)
         color = colors.get(rule.defect_type, (255, 255, 255))
         x1, y1, x2, y2 = det.bbox
-        cv2.rectangle(canvas, (x1, y1), (x2, y2), color, 2)
+        is_review_candidate = det.source == "YOLOv8 review candidate"
+        cv2.rectangle(canvas, (x1, y1), (x2, y2), color, 1 if is_review_candidate else 2)
         caption = f"{rule.defect_type}"
         if det.confidence > 0:
             caption += f" {det.confidence:.2f}"
+        if is_review_candidate:
+            caption += " review"
         cv2.putText(
             canvas,
             caption,
@@ -268,6 +292,10 @@ def summarize(detections: list[Detection], features: list[dict[str, Any]]) -> st
     if all(det.source.startswith("OpenCV candidate") for det in detections):
         lines.append(
             "> YOLOv8 모델이 연결되지 않아 OpenCV 전처리 기반 후보 모드로 표시 중입니다. 이 박스는 최종 AI 판정이 아니라, Black-hat에서 강조된 어두운 영역 후보입니다."
+        )
+    elif any(det.source == "YOLOv8 review candidate" for det in detections):
+        lines.append(
+            "> 얇은 박스의 `review` 표시는 기준 신뢰도보다 낮지만 모델이 포착한 검토 후보입니다. 최종 판정 전에 원본 영상과 함께 확인하세요."
         )
     for idx, det in enumerate(detections, start=1):
         rule = explain_detection(det.label)

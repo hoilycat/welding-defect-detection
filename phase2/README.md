@@ -74,6 +74,34 @@ runs/detect/train/weights/best.pt
 
 If no model is provided, the app still runs with an OpenCV candidate detector so preprocessing and rule-based explanation can be demonstrated.
 
+## Prepare the YOLO Dataset
+
+The source dataset already includes polygon JSON annotations. Convert those polygons
+to tight YOLO bounding boxes instead of labeling every image again in CVAT.
+
+Validate the complete source dataset without writing files:
+
+```bash
+python phase2/prepare_yolo_dataset.py --source-root "D:/path/to/1.데이터" --dry-run
+```
+
+Create an Ultralytics dataset after validation:
+
+```bash
+python phase2/prepare_yolo_dataset.py --source-root "D:/path/to/1.데이터" --output-root "D:/path/to/yolo-dataset"
+```
+
+Use `--inspection-type RT` or `--inspection-type VT` to prepare only one inspection
+modality. Each model receives the four classes that occur in that inspection type.
+Without the filter, the converter preserves all six defect classes. Normal images get
+empty label files.
+
+For a faster first experiment, cap every source category at the same number of images:
+
+```bash
+python phase2/prepare_yolo_dataset.py --source-root "D:/path/to/1.데이터" --output-root "D:/path/to/yolo-rt-pilot" --inspection-type RT --limit-per-folder 500
+```
+
 ## YOLO-less Smoke Test
 
 The current demo can be checked before a YOLOv8 model is trained or installed. The smoke test creates a synthetic weld-like image, runs the OpenCV fallback detector, extracts feature values, and writes demo output images if a save directory is provided.

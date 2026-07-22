@@ -38,6 +38,14 @@ DEFECT_RULES: dict[str, RuleResult] = {
         likely_cause="전류 부족, 용접 속도 과다, 개선각 부족 가능성",
         reason="길게 이어지는 어두운 띠는 용접부 결합 강도 저하를 의미할 수 있다.",
     ),
+    "incomplete penetration": RuleResult(
+        defect_type="incomplete penetration",
+        display_name="용입부족 (Incomplete Penetration)",
+        risk_score=75,
+        action="재검사 또는 보수 용접",
+        likely_cause="입열 부족, 개선 형상 또는 루트 간격 문제 가능성",
+        reason="용접부가 필요한 깊이까지 충분히 용입되지 않은 결함이다.",
+    ),
     "undercut": RuleResult(
         defect_type="undercut",
         display_name="언더컷 (Undercut)",
@@ -78,8 +86,9 @@ def normalize_defect_name(name: str | None) -> str:
         return "candidate"
     lowered = name.strip().lower().replace("_", " ")
     aliases = {
-        "lp": "lack of fusion",
-        "lack of penetration": "lack of fusion",
+        "lp": "incomplete penetration",
+        "lack of penetration": "incomplete penetration",
+        "incomplete penetration": "incomplete penetration",
         "porosity": "porosity",
         "pore": "porosity",
         "slag": "slag inclusion",
