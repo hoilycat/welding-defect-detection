@@ -9,3 +9,7 @@ docs/development-log-*.md
 result.json
 svm_model.xml
 Ultralytics/
+data/
+runs/
+phase2/gradio.*.log
+*.pt
