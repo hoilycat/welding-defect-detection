@@ -4,3 +4,7 @@ yolo_config/
 demo_outputs/
 __pycache__/
 *.pyc
+.DS_Store
+.cache/
+yolo_dataset*/
+runs/

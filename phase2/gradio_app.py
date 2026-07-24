@@ -11,7 +11,7 @@ DEFAULT_MODEL_PATH = (
     Path(__file__).resolve().parents[1]
     / "runs"
     / "detect"
-    / "rt-pilot-v2"
+    / "rt-v4-balanced"
     / "weights"
     / "best.pt"
 )
@@ -253,7 +253,7 @@ with gr.Blocks(
                 confidence_threshold = gr.Slider(
                     0.05,
                     0.95,
-                    value=0.15,
+                    value=0.10,
                     step=0.05,
                     label="YOLO 신뢰도",
                     elem_classes="compact-control",

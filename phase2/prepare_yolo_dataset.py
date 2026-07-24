@@ -42,9 +42,15 @@ class ConversionSummary:
     skipped_images: int = 0
     invalid_boxes: int = 0
     invalid_box_examples: list[str] = field(default_factory=list)
+    unsupported_images: int = 0
+    unsupported_image_examples: list[str] = field(default_factory=list)
 
 
 class DegenerateBoxError(ValueError):
+    pass
+
+
+class UnsupportedClassError(ValueError):
     pass
 
 
@@ -84,7 +90,9 @@ def _annotation_to_yolo(
     box_height = (y_max - y_min) / height
     active_class_ids = class_ids or CLASS_IDS
     if class_name not in active_class_ids:
-        raise ValueError(f"Defect case {class_name!r} is not valid for this inspection type")
+        raise UnsupportedClassError(
+            f"Defect case {class_name!r} is not valid for this inspection type"
+        )
     class_id = active_class_ids[class_name]
     line = (
         f"{class_id} {x_center:.6f} {y_center:.6f} "
@@ -158,36 +166,45 @@ def convert_split(
             raise FileNotFoundError(f"Image for {annotation_path.name} was not found: {image_name}")
 
         label_lines: list[str] = []
+        image_class_counts: Counter[str] = Counter()
         annotation_cases = {
             str(case).strip().lower()
             for case in document.get("meta", {}).get("annotation_case", [])
             if str(case).strip().lower() in CASE_ALIASES
         }
         fallback_case = next(iter(annotation_cases)) if len(annotation_cases) == 1 else None
-        for annotation_index, annotation in enumerate(document.get("annotations", [])):
-            try:
-                converted = _annotation_to_yolo(
-                    annotation,
-                    width,
-                    height,
-                    fallback_case=fallback_case,
-                    class_ids=active_class_ids,
-                )
-            except DegenerateBoxError as error:
-                summary.invalid_boxes += 1
-                summary.invalid_box_examples.append(
-                    f"{annotation_path} annotation #{annotation_index + 1}: {error}"
-                )
-                continue
-            except ValueError as error:
-                raise ValueError(
-                    f"{annotation_path} annotation #{annotation_index + 1}: {error}"
-                ) from error
-            if converted is None:
-                continue
-            class_name, line = converted
-            class_counts[class_name] += 1
-            label_lines.append(line)
+        try:
+            for annotation_index, annotation in enumerate(document.get("annotations", [])):
+                try:
+                    converted = _annotation_to_yolo(
+                        annotation,
+                        width,
+                        height,
+                        fallback_case=fallback_case,
+                        class_ids=active_class_ids,
+                    )
+                except DegenerateBoxError as error:
+                    summary.invalid_boxes += 1
+                    summary.invalid_box_examples.append(
+                        f"{annotation_path} annotation #{annotation_index + 1}: {error}"
+                    )
+                    continue
+                if converted is None:
+                    continue
+                class_name, line = converted
+                image_class_counts[class_name] += 1
+                label_lines.append(line)
+        except UnsupportedClassError as error:
+            summary.unsupported_images += 1
+            summary.skipped_images += 1
+            summary.unsupported_image_examples.append(f"{annotation_path}: {error}")
+            continue
+        except ValueError as error:
+            raise ValueError(
+                f"{annotation_path} annotation #{annotation_index + 1}: {error}"
+            ) from error
+
+        class_counts.update(image_class_counts)
 
         summary.images += 1
         summary.boxes += len(label_lines)
@@ -270,6 +287,10 @@ def main() -> None:
         total_summary.skipped_images += summary.skipped_images
         total_summary.invalid_boxes += summary.invalid_boxes
         total_summary.invalid_box_examples.extend(summary.invalid_box_examples)
+        total_summary.unsupported_images += summary.unsupported_images
+        total_summary.unsupported_image_examples.extend(
+            summary.unsupported_image_examples
+        )
         total_counts.update(counts)
         print(
             f"{target_split}: {summary.images} images, {summary.boxes} boxes, "
@@ -288,6 +309,11 @@ def main() -> None:
         print(f"  warning: {example}")
     if len(total_summary.invalid_box_examples) > 10:
         print(f"  ... and {len(total_summary.invalid_box_examples) - 10} more")
+    print(f"mixed/out-of-scope images skipped: {total_summary.unsupported_images}")
+    for example in total_summary.unsupported_image_examples[:10]:
+        print(f"  warning: {example}")
+    if len(total_summary.unsupported_image_examples) > 10:
+        print(f"  ... and {len(total_summary.unsupported_image_examples) - 10} more")
     print("boxes by class:")
     for class_name in CLASS_NAMES_BY_TYPE[args.inspection_type]:
         print(f"  {class_name}: {total_counts[class_name]}")

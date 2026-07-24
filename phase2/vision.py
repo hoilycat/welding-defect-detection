@@ -125,6 +125,7 @@ def detect_with_yolo(
     results = model.predict(
         image_bgr,
         conf=prediction_threshold,
+        imgsz=960,
         iou=0.45,
         agnostic_nms=False,
         verbose=False,
