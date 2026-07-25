@@ -24,7 +24,7 @@ DEFECT_RULES: dict[str, RuleResult] = {
     ),
     "lack of fusion": RuleResult(
         defect_type="lack of fusion",
-        display_name="용입불량 (Lack of Fusion)",
+        display_name="융합불량 (Lack of Fusion)",
         risk_score=80,
         action="재검사 또는 보수 용접",
         likely_cause="전류 부족, 용접 속도 과다, 개선각 부족 가능성",
@@ -32,7 +32,7 @@ DEFECT_RULES: dict[str, RuleResult] = {
     ),
     "fusion": RuleResult(
         defect_type="lack of fusion",
-        display_name="용입불량 (Lack of Fusion)",
+        display_name="융합불량 (Lack of Fusion)",
         risk_score=80,
         action="재검사 또는 보수 용접",
         likely_cause="전류 부족, 용접 속도 과다, 개선각 부족 가능성",
