@@ -1,17 +1,26 @@
 <div align="center">
 
 # 🔥 WeldVision
-### C++ OpenCV 기반 용접 결함 특징 추출 및 SVM 분류 실험
+### RT·VT 용접 결함 검출 및 해석 프로토타입
 
-![Now](https://img.shields.io/badge/🔴%20현재-Stage%201%20SVM%20%2B%20Stage%202%20Prototype-red?style=for-the-badge)
-![Next](https://img.shields.io/badge/🟠%20다음-YOLOv8%20Training-orange?style=for-the-badge)
-![Status](https://img.shields.io/badge/Stage%201-SVM%20Experiment-yellow?style=for-the-badge)
+![Now](https://img.shields.io/badge/현재-RT%20%2B%20VT%20YOLOv8%20Demo-red?style=for-the-badge)
+![VT mAP50](https://img.shields.io/badge/VT%20best%20mAP50-0.847-orange?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Local%20Prototype%20Complete-yellow?style=for-the-badge)
 
-> C++ 고전비전으로 결함의 물리적 특성을 직접 이해하는 것부터 시작해,  
-> 현재는 GT 폴리곤 라벨을 활용한 특징 추출과 SVM 4클래스 분류를 구현한 단계입니다.  
-> Stage 2에서는 RIAWELC→YOLO 변환·학습 파이프라인과 Gradio 데모를 구현하고, RT 파일럿 모델 연결까지 완료했습니다.
+> C++ 고전비전으로 결함의 물리적 특성을 직접 이해하는 것부터 시작해,
+> GT 폴리곤 기반 SVM 4클래스 분류와 RIAWELC→YOLO 변환 파이프라인을 구현했습니다.
+> 현재는 RT·VT 전용 YOLOv8 모델을 Gradio 앱에 연결해 결함 위치·종류·판독 근거를 함께 확인할 수 있습니다.
 
 </div>
+
+---
+
+## 📚 문서
+
+- [최종 프로젝트 보고서](docs/final-project-report.md): 목표, 구성, RT·VT 학습 결과, 검증 사례, 한계
+- [시연 사용 가이드](docs/demo-guide.md): 실행, RT·VT 선택, 결과 해석, 문제 확인 순서
+- [VT YOLOv8 학습 기록](docs/vt-training-2026-07-25.md): 데이터 구성과 클래스별 성능
+- [Phase 2 개발 안내](phase2/README.md): 코드 실행과 데이터 변환 방법
 
 ---
 
@@ -19,7 +28,7 @@
 
 ```mermaid
 flowchart LR
-    subgraph S1["🔴 1단계 — C++ OpenCV + SVM 실험 (현재)"]
+    subgraph S1["✅ 1단계 — C++ OpenCV + SVM 실험"]
         A[📷 X-ray 이미지 + JSON 라벨 입력] --> B[전처리\nGrayscale · CLAHE]
         B --> C[GT 폴리곤 마스크 생성]
         C --> D[특징 추출\n원형도 · 종횡비 · 밝기 · 면적]
@@ -27,11 +36,11 @@ flowchart LR
         E --> F[✅ 정확도 + Confusion Matrix]
     end
 
-    subgraph S2["🟠 2단계 — 검출/해석 데모 프로토타입"]
+    subgraph S2["✅ 2단계 — RT·VT 검출/해석 프로토타입"]
         G[📷 이미지 업로드] --> H[YOLOv8 검출\n결함 위치 · 종류]
         H --> I[1단계 특징분석 재활용\n원형도 · 종횡비 · 밝기]
         I --> J[위험도 스코어링\n+ 원인추론 룰]
-        J --> K[🖥️ Gradio 데모\nHuggingFace Spaces]
+        J --> K[🖥️ 로컬 Gradio 데모\nRT·VT 모델 자동 선택]
     end
 
     D -- "특징 설계 자산 그대로 이어받음" --> I
@@ -94,13 +103,13 @@ flowchart TD
 | 7 | 규칙 기반 분류기 + putText | ✅ |
 | 8 | 배치 처리 (컨투어 디버깅 중) | ✅ |
 | 9 | GT 폴리곤 시각화 + 멀티뷰 (CLAHE·Canny·GT) | ✅ |
-| **10** | **SVM 학습 + 정확도 86.2% (4클래스)** | **👈 여기까지** |
+| **10** | **SVM 학습 + 정확도 86.2% (4클래스)** | **✅** |
 | 11 | Confusion Matrix 분석 + 클래스 불균형 개선 | 일부 구현 / 개선 예정 |
-| 12 | README polish + 지원 완료 | 🔜 |
+| 12 | 최종 보고서 + 시연 가이드 + README 정리 | ✅ |
 
 ---
 
-## 🟠 2단계 계획 — 검출/해석/데모 확장
+## ✅ 2단계 — 검출/해석/데모 확장
 
 > **목표:** 검출 + 위험도 해석 + 대시보드  
 > **상태:** RT·VT 전용 YOLOv8 모델을 각각 학습하고 Gradio 대시보드에서 검사 방식에 따라 선택하도록 연결했습니다.
@@ -123,18 +132,18 @@ flowchart LR
     A[📷 이미지 업로드] --> B["YOLOv8 검출\n'여기 결함, 종류=○○'"]
     B --> C["1단계 특징분석\n원형도 · 종횡비 · 밝기"]
     C --> D["위험도 스코어링\n+ 원인추론 룰베이스"]
-    D --> E["🖥️ Gradio 데모\nHuggingFace Spaces"]
+    D --> E["🖥️ 로컬 Gradio 데모\nRT·VT 모델 자동 선택"]
 
     style B fill:#2d1f0f,stroke:#ff8800,color:#fff
     style C fill:#2d1f1f,stroke:#ff4444,color:#fff
     style E fill:#0f2d1f,stroke:#44ff88,color:#fff
 ```
 
-### 2단계 1차 구현 현황 — Gradio 해석 대시보드
+### 2단계 구현 결과 — RT·VT Gradio 해석 대시보드
 
 > 최초 구현 브랜치 `phase2-gradio-dashboard`의 코드가 현재 `main`에 병합되어 있습니다.
 
-YOLOv8 학습 모델을 연결하기 전에, 먼저 검출 결과를 설명하고 시각화할 수 있는 Gradio 기반 해석 대시보드를 1차 구현했습니다.
+검출 결과를 설명하고 시각화하는 Gradio 대시보드에 RT·VT YOLOv8 모델을 연결했습니다.
 
 현재 포함된 기능:
 
@@ -168,11 +177,11 @@ YOLOv8 학습 모델을 연결하기 전에, 먼저 검출 결과를 설명하�
 - 2026-07-24: RTX 4070에서 RT 4클래스 균형 모델을 추가 학습하고 Gradio에 연결 (mAP50 0.413)
 - 2026-07-22: RGB/BGR 입력 오류, 겹친 클래스 제거, 저신뢰도 후보 표시 문제 수정
 - 2026-07-25: VT 4클래스 균형 모델 30 epoch 학습 및 RT/VT 선택 기능 연결 (mAP50 0.847)
-- 다음 작업: 독립 테스트 이미지 평가 → 실패 사례 정리 → 최종 문서 및 시연 화면 정리
+- 남은 개선: 독립 현장 이미지 평가 → 실패 사례 확대 → RT·언더컷 성능 개선
 
 </details>
 
-VT 모델 학습 결과는 [VT 학습 기록](docs/vt-training-2026-07-25.md)에 정리했습니다. 다음 단계에서는 독립 테스트 이미지로 RT·VT 모델의 성공·실패 사례를 평가하고 최종 시연 자료를 정리합니다.
+전체 결과와 한계는 [최종 프로젝트 보고서](docs/final-project-report.md), 사용 순서는 [시연 사용 가이드](docs/demo-guide.md), VT 세부 학습 결과는 [VT 학습 기록](docs/vt-training-2026-07-25.md)에 정리했습니다.
 
 ---
 
@@ -265,11 +274,11 @@ with gr.Blocks(title="WeldVision", theme=gr.themes.Soft()) as demo:
 
 | 단계 | 내용 |
 |------|------|
-| ① | C++ SVM 완성 → JSON 출력 기능 추가 |
-| ② | YOLOv8 파인튜닝 (용접 데이터셋 학습) |
-| ③ | Gradio 앱 작성 (JSON 읽기 + YOLO 추론 + 시각화) |
-| ④ | HuggingFace Spaces `gradio` SDK로 배포 |
-| ⑤ | C++ 결과 / YOLO 결과 나란히 비교 데모 완성 |
+| ① | C++ SVM 실험과 특징 분석 완료 |
+| ② | RT·VT YOLOv8 파인튜닝 완료 |
+| ③ | 로컬 Gradio 앱과 YOLO 추론 연결 완료 |
+| ④ | HuggingFace Spaces 배포 검토 (선택 사항) |
+| ⑤ | C++ 결과 직접 연동 검토 (선택 사항) |
 
 ---
 
@@ -278,7 +287,7 @@ with gr.Blocks(title="WeldVision", theme=gr.themes.Soft()) as demo:
 | 단계 | 기술 |
 |------|------|
 | 1단계 | C++17, OpenCV, CMake, vcpkg, nlohmann_json |
-| 2단계 프로토타입 | Python, OpenCV, Gradio, pandas, YOLOv8 (Ultralytics, 모델 연결 예정) |
+| 2단계 프로토타입 | Python, OpenCV, Gradio, pandas, YOLOv8 (Ultralytics) |
 | 배포 계획 | Gradio, HuggingFace Spaces, C++→JSON 브리지 |
 
 ## 📁 프로젝트 구조
@@ -292,8 +301,13 @@ welding-defect-detection/
 │   ├── gradio_app.py     # Gradio 해석 대시보드
 │   ├── vision.py         # 전처리·YOLO/OpenCV 후보 검출·특징 추출
 │   ├── rules.py          # 위험도·원인·권장 조치 규칙
+│   ├── prepare_yolo_dataset.py # JSON 폴리곤 → YOLO 데이터 변환
+│   ├── test_*.py         # Phase 2 단위 테스트
 │   ├── requirements.txt  # Python 의존성
 │   └── README.md         # Phase 2 상세 설명
+├── docs/
+│   ├── final-project-report.md # 최종 프로젝트 보고서
+│   └── demo-guide.md     # 시연 사용 가이드
 ├── config.json           # 로컬 경로 설정 (현재 저장소에 포함됨)
 ├── config.json.example   # 경로 설정 예시
 ├── CMakeLists.txt        # 빌드 설정
