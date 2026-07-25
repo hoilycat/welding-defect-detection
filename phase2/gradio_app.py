@@ -7,14 +7,30 @@ LOCAL_PACKAGES = Path(__file__).resolve().parent / ".packages"
 if LOCAL_PACKAGES.exists():
     sys.path.insert(0, str(LOCAL_PACKAGES))
 
-DEFAULT_MODEL_PATH = (
+DEFAULT_RT_MODEL_PATH = (
     Path(__file__).resolve().parents[1]
     / "runs"
     / "detect"
-    / "rt-pilot-v2"
+    / "rt-v4-balanced"
     / "weights"
     / "best.pt"
 )
+DEFAULT_VT_MODEL_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "runs"
+    / "detect"
+    / "vt-v1-balanced"
+    / "weights"
+    / "best.pt"
+)
+MODEL_PATHS = {
+    "RT": DEFAULT_RT_MODEL_PATH,
+    "VT": DEFAULT_VT_MODEL_PATH,
+}
+MODEL_CONFIDENCE_THRESHOLDS = {
+    "RT": 0.10,
+    "VT": 0.25,
+}
 
 import pandas as pd
 
@@ -127,6 +143,18 @@ APP_CSS = """
 """
 
 
+def model_path_for_inspection(inspection_type: str) -> str:
+    path = MODEL_PATHS.get(inspection_type)
+    return str(path) if path and path.is_file() else ""
+
+
+def model_settings_for_inspection(inspection_type: str) -> tuple[str, float]:
+    return (
+        model_path_for_inspection(inspection_type),
+        MODEL_CONFIDENCE_THRESHOLDS.get(inspection_type, 0.25),
+    )
+
+
 def analyze_image(
     image,
     model_path,
@@ -235,10 +263,15 @@ with gr.Blocks(
                 type="numpy",
                 height=180,
             )
+            inspection_type = gr.Radio(
+                choices=[("방사선 검사 (RT)", "RT"), ("육안 검사 (VT)", "VT")],
+                value="RT",
+                label="검사 방식",
+            )
             with gr.Row(elem_id="model-actions"):
                 model_path = gr.Textbox(
                     label="YOLOv8 모델 경로",
-                    value=str(DEFAULT_MODEL_PATH) if DEFAULT_MODEL_PATH.is_file() else "",
+                    value=model_path_for_inspection("RT"),
                     placeholder="선택 입력: runs/detect/train/weights/best.pt",
                     scale=3,
                 )
@@ -253,7 +286,7 @@ with gr.Blocks(
                 confidence_threshold = gr.Slider(
                     0.05,
                     0.95,
-                    value=0.15,
+                    value=0.10,
                     step=0.05,
                     label="YOLO 신뢰도",
                     elem_classes="compact-control",
@@ -376,6 +409,17 @@ with gr.Blocks(
         fn=analyze_image,
         inputs=analysis_inputs,
         outputs=analysis_outputs,
+    )
+
+    inspection_type.change(
+        fn=model_settings_for_inspection,
+        inputs=inspection_type,
+        outputs=[model_path, confidence_threshold],
+    ).then(
+        fn=analyze_image,
+        inputs=analysis_inputs,
+        outputs=analysis_outputs,
+        show_progress="hidden",
     )
 
     for live_component in [

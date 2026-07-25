@@ -5,7 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from prepare_yolo_dataset import CLASS_IDS, _annotation_to_yolo, convert_split
+from prepare_yolo_dataset import (
+    CLASS_IDS,
+    UnsupportedClassError,
+    _annotation_to_yolo,
+    convert_split,
+)
 
 
 class PrepareYoloDatasetTest(unittest.TestCase):
@@ -53,6 +58,21 @@ class PrepareYoloDatasetTest(unittest.TestCase):
 
         self.assertEqual(class_name, "porosity")
 
+    def test_out_of_scope_class_is_rejected(self) -> None:
+        annotation = {
+            "class": "defect",
+            "case": "incomplete penetration",
+            "coordinate": {"x": [10, 20], "y": [30, 40]},
+        }
+
+        with self.assertRaises(UnsupportedClassError):
+            _annotation_to_yolo(
+                annotation,
+                width=100,
+                height=100,
+                class_ids={"porosity": 0},
+            )
+
     def test_split_conversion_writes_image_and_label(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -97,6 +117,55 @@ class PrepareYoloDatasetTest(unittest.TestCase):
             self.assertEqual(counts["incomplete_penetration"], 1)
             self.assertTrue((output / "images" / "train" / "sample.jpg").is_file())
             self.assertTrue((output / "labels" / "train" / "sample.txt").is_file())
+
+    def test_split_conversion_skips_mixed_out_of_scope_image(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            image_dir = root / "Training" / "01.원천데이터" / "TS_RT_test"
+            label_dir = root / "Training" / "02.라벨링데이터" / "TL_RT_test"
+            output = root / "output"
+            image_dir.mkdir(parents=True)
+            label_dir.mkdir(parents=True)
+            (image_dir / "mixed.jpg").write_bytes(b"image")
+            document = {
+                "info": {"type": "RT"},
+                "image_data": {
+                    "file_name": "mixed",
+                    "format": "jpg",
+                    "width": 100,
+                    "height": 100,
+                },
+                "annotations": [
+                    {
+                        "class": "defect",
+                        "case": "porosity",
+                        "coordinate": {"x": [20, 40], "y": [30, 50]},
+                    },
+                    {
+                        "class": "defect",
+                        "case": "incomplete penetration",
+                        "coordinate": {"x": [50, 70], "y": [30, 50]},
+                    },
+                ],
+            }
+            (label_dir / "mixed.json").write_text(
+                json.dumps(document), encoding="utf-8"
+            )
+
+            summary, counts = convert_split(
+                source_root=root,
+                output_root=output,
+                source_split="Training",
+                target_split="train",
+                inspection_type="RT",
+                dry_run=False,
+                limit_per_folder=None,
+            )
+
+            self.assertEqual(summary.images, 0)
+            self.assertEqual(summary.unsupported_images, 1)
+            self.assertEqual(counts, {})
+            self.assertFalse((output / "images" / "train" / "mixed.jpg").exists())
 
 
 if __name__ == "__main__":

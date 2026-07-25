@@ -1,56 +1,16 @@
 # WeldVision Phase 2
 
-YOLOv8 detection, OpenCV preprocessing, feature analysis, risk scoring, and rule-based cause inference are separated into small modules so the system can grow without throwing away the Stage 1 work.
+Phase 2 is a local welding inspection assistant that combines separate RT/VT YOLOv8 detectors with OpenCV evidence views, feature analysis, risk scoring, and rule-based explanations.
 
-## Goal
+## Current Status
 
-This stage changes the project from "defect classification only" into an inspection assistant:
+- RT and VT inspection modes are available in the Gradio UI.
+- Each mode selects its own model path and confidence threshold.
+- RT classes: crack, porosity, lack of fusion, slag inclusion.
+- VT classes: porosity, lack of fusion, incomplete penetration, undercut.
+- The VT model reached a best training mAP50 of 0.847.
 
-- Detect defect location and class with YOLOv8.
-- Show visual evidence with OpenCV preprocessing.
-- Reuse Stage 1 features such as circularity, aspect ratio, brightness, and area.
-- Explain risk, likely causes, and recommended actions.
-- Present everything through a Gradio demo.
-
-## Main Preprocessing Views
-
-| View | Role |
-|---|---|
-| CLAHE | Local contrast enhancement for faint defects |
-| Black-hat | Highlights dark defect candidates |
-| Gradient | Highlights linearity, boundaries, and direction |
-| Emboss | Highlights texture and uneven patterns |
-
-Canny is intentionally not used as the core method because weld textures and noise can be over-detected as edges. It can be added later as a comparison-only view.
-
-## UI Layout
-
-```text
-[Image upload] [Optional YOLO model path]
-
-+----------------------+----------------------+
-| Original             | Detection result     |
-+----------------------+----------------------+
-
-+-----------+-----------+-----------+-----------+
-| CLAHE     | Black-hat | Gradient  | Emboss    |
-+-----------+-----------+-----------+-----------+
-
-[Sliders]
-- Contrast clip limit
-- Black-hat kernel size
-- Gradient strength
-- Emboss depth
-- Sharpen amount
-
-[Analysis]
-- Defect type
-- Confidence
-- Risk score
-- Circularity / aspect ratio / brightness / area
-- Likely cause
-- Recommended action
-```
+See the [final project report](../docs/final-project-report.md) for metrics and limitations, and the [demo guide](../docs/demo-guide.md) for the Korean user workflow.
 
 ## Run
 
@@ -60,60 +20,70 @@ Install dependencies:
 pip install -r phase2/requirements.txt
 ```
 
-Run the demo:
+Start the local app:
 
 ```bash
 python phase2/gradio_app.py
 ```
 
-If you already have a trained YOLOv8 model, enter the model path in the UI, for example:
+Open `http://127.0.0.1:7860/` and select the inspection mode before uploading an image.
 
-```text
-runs/detect/train/weights/best.pt
-```
+| Mode | Default model | Default confidence |
+|---|---|---:|
+| RT | `runs/detect/rt-v4-balanced/weights/best.pt` | 0.10 |
+| VT | `runs/detect/vt-v1-balanced/weights/best.pt` | 0.25 |
 
-If no model is provided, the app still runs with an OpenCV candidate detector so preprocessing and rule-based explanation can be demonstrated.
+The paths can be changed in the UI. If no valid model is available, the app can still show an OpenCV candidate, but that fallback is preprocessing evidence rather than a trained AI decision.
 
-## Prepare the YOLO Dataset
+## Main Views
 
-The source dataset already includes polygon JSON annotations. Convert those polygons
-to tight YOLO bounding boxes instead of labeling every image again in CVAT.
+| View | Role |
+|---|---|
+| CLAHE | Enhances local contrast in faint areas |
+| Black-hat | Highlights dark patterns relative to their surroundings |
+| Gradient | Highlights boundaries and directional structure |
+| Emboss | Highlights surface texture and uneven patterns |
 
-Validate the complete source dataset without writing files:
+The preprocessing sliders do not retrain or tune YOLO. `YOLO confidence` directly changes which model detections are displayed.
+
+## Prepare a YOLO Dataset
+
+The source dataset contains polygon JSON annotations. `prepare_yolo_dataset.py` validates the polygons and converts them to tight YOLO boxes, so the existing labels do not need to be redrawn in CVAT.
+
+Validate without writing output:
 
 ```bash
 python phase2/prepare_yolo_dataset.py --source-root "D:/path/to/1.데이터" --dry-run
 ```
 
-Create an Ultralytics dataset after validation:
+Create one inspection-specific dataset:
 
 ```bash
-python phase2/prepare_yolo_dataset.py --source-root "D:/path/to/1.데이터" --output-root "D:/path/to/yolo-dataset"
+python phase2/prepare_yolo_dataset.py --source-root "D:/path/to/1.데이터" --output-root "D:/path/to/yolo-vt" --inspection-type VT
 ```
 
-Use `--inspection-type RT` or `--inspection-type VT` to prepare only one inspection
-modality. Each model receives the four classes that occur in that inspection type.
-Without the filter, the converter preserves all six defect classes. Normal images get
-empty label files.
+Use `--inspection-type RT` or `--inspection-type VT`. Normal images receive empty label files, zero-area boxes are skipped, and classes outside the selected modality are excluded.
 
-For a faster first experiment, cap every source category at the same number of images:
+## Verification
+
+Run unit tests:
 
 ```bash
-python phase2/prepare_yolo_dataset.py --source-root "D:/path/to/1.데이터" --output-root "D:/path/to/yolo-rt-pilot" --inspection-type RT --limit-per-folder 500
+python -m unittest discover -s phase2 -p "test_*.py" -v
 ```
 
-## YOLO-less Smoke Test
-
-The current demo can be checked before a YOLOv8 model is trained or installed. The smoke test creates a synthetic weld-like image, runs the OpenCV fallback detector, extracts feature values, and writes demo output images if a save directory is provided.
+Run the OpenCV fallback smoke test:
 
 ```bash
 python phase2/smoke_test.py --save-dir phase2/demo_outputs
 ```
 
-Expected result:
+The fallback smoke test checks the non-YOLO processing path only. Reported model performance comes from the Ultralytics validation results, not from this smoke test.
 
-```text
-OK: 1 fallback candidate(s) detected: crack
-```
+## Important Limitations
 
-The fallback result is a visual candidate, not a final AI judgment. It is intended to prove that the Phase 2 UI, preprocessing views, feature extraction, and rule-based explanation path work before the YOLOv8 detector is connected.
+- RT remains a pilot-quality model and is weaker than the VT model.
+- VT undercut has lower recall than the other VT classes.
+- Demo samples chosen from training folders verify the app flow, not independent field accuracy.
+- Model weights are intentionally excluded from Git and must be supplied locally.
+- The app is an inspection aid, not a safety certification or replacement for an inspector.
