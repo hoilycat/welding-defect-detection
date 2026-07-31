@@ -36,8 +36,14 @@ fs::path pathFromUtf8(const std::string& utf8) {
 json loadConfig() {
     std::ifstream f("config.json");
     if (!f.is_open()) {
-        std::cerr << "[오류] config.json 없음! config.json.example 참고해서 만들어줘." << std::endl;
-        exit(1);
+        std::ifstream f_ex("config.json.example");
+        if (f_ex.is_open()) {
+            std::cout << "[안내] config.json이 없어 config.json.example 설정을 기본값으로 불러옵니다." << std::endl;
+            json cfg; f_ex >> cfg;
+            return cfg;
+        }
+        std::cout << "[안내] config.json 및 config.json.example이 존재하지 않아 기본 경로로 실행합니다." << std::endl;
+        return {{"data_dir", "."}, {"label_dir", "."}, {"output_dir", "."}};
     }
     json cfg; f >> cfg;
     return cfg;
@@ -126,7 +132,8 @@ void processImage(const fs::path& img_path, const fs::path& json_path) {
         auto& ys = ann["coordinate"]["y"];
         std::string case_name = ann["case"];
         std::vector<cv::Point> pts;
-        for (size_t i = 0; i < xs.size(); i++)
+        size_t n_pts = std::min(xs.size(), ys.size());
+        for (size_t i = 0; i < n_pts; i++)
             pts.push_back({xs[i].get<int>(), ys[i].get<int>()});
         cv::polylines(overlay, pts, true, caseColor(case_name), 2);
         cv::putText(overlay, case_name, pts[0], cv::FONT_HERSHEY_SIMPLEX, 0.5, caseColor(case_name), 1);
@@ -197,7 +204,8 @@ int collectFromFolder(const fs::path& img_dir, const fs::path& json_dir,
             auto& xs = ann["coordinate"]["x"];
             auto& ys = ann["coordinate"]["y"];
             std::vector<cv::Point> pts;
-            for (size_t i = 0; i < xs.size(); i++)
+            size_t n_pts = std::min(xs.size(), ys.size());
+            for (size_t i = 0; i < n_pts; i++)
                 pts.push_back({xs[i].get<int>(), ys[i].get<int>()});
 
             auto feat = extractFeatures(clahe_out, pts);
@@ -236,7 +244,9 @@ void trainAndEvaluate(const std::string& data_dir, const std::string& label_dir)
     }
 
     if (all_feats.empty()) {
-        std::cout << "\n샘플이 없습니다. 경로를 확인해주세요." << std::endl;
+        std::cout << "\n[안내] 지정된 데이터 경로에서 학습 샘플을 찾지 못했습니다." << std::endl;
+        std::cout << " - config.json에 데이터셋 경로가 바르게 설정되어 있는지 확인해 주세요." << std::endl;
+        std::cout << " - RT/VT AI 대시보드 시연은 'run_demo.bat' 또는 'python phase2/gradio_app.py'를 이용해 바로 실행할 수 있습니다." << std::endl;
         return;
     }
 
