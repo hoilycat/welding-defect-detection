@@ -13,3 +13,5 @@ data/
 runs/
 phase2/gradio.*.log
 *.pt
+portfolio_review/
+.tmp-portfolio-review/

@@ -343,6 +343,41 @@ cmake --build build -j
 
 **4-A. 실행 (macOS)**
 ```bash
+├── config.json           # 로컬 경로 설정 (현재 저장소에 포함됨)
+├── config.json.example   # 경로 설정 예시
+├── CMakeLists.txt        # 빌드 설정
+├── CMakeLists_win.txt    # 이전 Windows용 CMake 설정
+├── run.bat               # Windows 실행 배치파일
+└── README.md
+```
+
+## ⚙️ 빌드 및 실행
+
+### Stage 1 — C++ OpenCV + SVM
+
+**1. 의존성 준비**
+
+- 공통: CMake 3.15+, C++17 컴파일러, OpenCV, nlohmann-json
+- Windows: Visual Studio와 vcpkg 사용 권장
+- macOS: Homebrew를 사용한다면 `brew install cmake opencv nlohmann-json`
+
+**2. config.json 생성**
+```bash
+cp config.json.example config.json
+# config.json 열어서 본인 경로로 수정
+```
+
+> 참고: 현재 저장소에는 `config.json`도 함께 포함되어 있습니다. 다른 환경에서 실행하려면 `data_dir`, `label_dir`를 본인 데이터셋 경로로 수정해야 합니다.
+
+**3-A. CMake 빌드 (macOS)**
+```bash
+cmake -S . -B build \
+  -DOpenCV_DIR="$(brew --prefix opencv)/lib/cmake/opencv4"
+cmake --build build -j
+```
+
+**4-A. 실행 (macOS)**
+```bash
 ./build/main
 ```
 
@@ -350,32 +385,42 @@ cmake --build build -j
 
 **3-B. CMake 빌드 (Windows)**
 ```bash
-cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake \
-         -DVCPKG_TARGET_TRIPLET=x64-windows \
-         -DOpenCV_DIR="C:/Users/{사용자}/Downloads/opencv/build/x64/vc16/lib"
+cmake -S . -B build
 cmake --build build --config Release
 ```
 
 **4-B. 실행 (Windows PowerShell)**
 ```powershell
-$env:PATH += ";C:/Users/{사용자}/Downloads/opencv/build/x64/vc16/bin"
 .\build\Release\main.exe
 ```
 
 `run.bat`을 사용할 때는 필요하면 `OPENCV_BIN` 환경 변수에 OpenCV DLL 폴더를 지정합니다. 배치파일은 자신의 위치를 프로젝트 루트로 사용하므로 저장소 경로를 직접 수정할 필요가 없습니다.
 
-### Stage 2 — Gradio 해석 대시보드
+---
 
-Python 3.10 이상 환경에서 다음과 같이 실행합니다.
+### 🟢 Stage 2 — Gradio 해석 대시보드 시연
+
+운영체제별 **원클릭 구동 스크립트**를 이용하여 즉시 대시보드를 시연할 수 있습니다:
+
+* **Windows**:
+  ```cmd
+  run_demo.bat
+  ```
+* **macOS / Linux**:
+  ```bash
+  chmod +x run_demo.sh
+  ./run_demo.sh
+  ```
+
+수동으로 명령어를 입력하여 실행하려면 다음과 같이 구동합니다:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
-python -m pip install -r phase2/requirements.txt
-python phase2/gradio_app.py
+python3 -m pip install gradio ultralytics opencv-python pandas
+python3 phase2/gradio_app.py
 ```
 
-모델 경로를 비워두면 OpenCV 후보 검출 모드로 실행됩니다. 학습된 YOLOv8 `best.pt` 경로를 입력하면 YOLO 추론을 먼저 시도합니다.
+* 모델 경로를 비워두거나 모델 가중치 파일이 존재하지 않을 경우, 자동으로 **OpenCV 모폴로지 Black-hat 기반 보조 후보 검출 모드**로 안전하게 실행됩니다.
+* 학습된 YOLOv8 `best.pt` 가중치 파일이 연결되어 있으면 YOLOv8 딥러닝 검출이 최우선 적용됩니다.
 
 ---
 

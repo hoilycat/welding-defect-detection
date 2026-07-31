@@ -9,7 +9,11 @@ from pathlib import Path
 PHASE2_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = PHASE2_ROOT.parent
 LOCAL_PACKAGES = PHASE2_ROOT / ".packages"
-if LOCAL_PACKAGES.exists():
+if (
+    LOCAL_PACKAGES.exists()
+    and sys.version_info[:2] == (3, 12)
+    and sys.platform == "win32"
+):
     sys.path.insert(0, str(LOCAL_PACKAGES))
 os.environ.setdefault("YOLO_CONFIG_DIR", str(PROJECT_ROOT / "Ultralytics"))
 

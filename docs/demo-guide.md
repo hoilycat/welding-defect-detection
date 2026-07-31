@@ -13,11 +13,18 @@ runs/detect/vt-v1-balanced/weights/best.pt
 
 ## 2. 앱 실행
 
-```powershell
-python phase2/gradio_app.py
+운영체제별 원클릭 실행 스크립트를 사용하는 것을 권장합니다:
+
+- **Windows**: `run_demo.bat`
+- **macOS / Linux**: `./run_demo.sh` (`chmod +x run_demo.sh`로 실행 권한 부여)
+
+또는 직접 Python 명령어로 실행할 수 있습니다:
+
+```bash
+python3 phase2/gradio_app.py
 ```
 
-브라우저에서 `http://127.0.0.1:7860/`을 연다.
+실행 후 콘솔에 표시되는 로컬 URL (`http://127.0.0.1:7860/`)을 브라우저로 엽니다.
 
 ## 3. 검사 방식 선택
 

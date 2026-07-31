@@ -4,7 +4,11 @@ import sys
 from pathlib import Path
 
 LOCAL_PACKAGES = Path(__file__).resolve().parent / ".packages"
-if LOCAL_PACKAGES.exists():
+if (
+    LOCAL_PACKAGES.exists()
+    and sys.version_info[:2] == (3, 12)
+    and sys.platform == "win32"
+):
     sys.path.insert(0, str(LOCAL_PACKAGES))
 
 DEFAULT_RT_MODEL_PATH = (
@@ -33,15 +37,16 @@ MODEL_CONFIDENCE_THRESHOLDS = {
 }
 
 import pandas as pd
-
 import gradio as gr
 
 from rules import explain_detection
 from vision import (
+    crop_detection_roi,
     detect_candidates_from_blackhat,
     detect_with_yolo,
     draw_detections,
     extract_features,
+    get_location_description,
     preprocess_views,
     summarize,
 )
@@ -98,23 +103,36 @@ APP_CSS = """
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
-.compact-control {
-    min-width: 0 !important;
-    padding: 8px !important;
+#slider-grid > .form > div {
+    background: #ffffff !important;
+    border: 1px solid #eef0f3 !important;
+    border-radius: 8px !important;
+    padding: 4px 8px !important;
+    box-shadow: none !important;
 }
 #evidence-grid {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
-.result-image img {
-    max-height: 240px;
+.result-image:not(.modal) img {
+    max-height: 480px;
     object-fit: contain;
 }
-.evidence-image img {
-    max-height: 160px;
+.evidence-image:not(.modal) img {
+    max-height: 200px;
     object-fit: contain;
+}
+.crop-gallery img {
+    min-height: 340px !important;
+    max-height: 400px !important;
+    object-fit: contain !important;
+    background: #111 !important;
+    border-radius: 8px !important;
 }
 #analysis-summary {
     max-height: 280px;
@@ -122,8 +140,9 @@ APP_CSS = """
     padding-right: 8px;
 }
 #feature-table {
-    max-height: 300px;
-    overflow: auto;
+    max-height: fit-content !important;
+    overflow-x: auto;
+    font-size: 13px !important;
 }
 @media (max-width: 820px) {
     .gradio-container {
@@ -137,7 +156,7 @@ APP_CSS = """
     }
     .result-image img,
     .evidence-image img {
-        max-height: 210px;
+        max-height: 280px;
     }
 }
 """
@@ -145,7 +164,13 @@ APP_CSS = """
 
 def model_path_for_inspection(inspection_type: str) -> str:
     path = MODEL_PATHS.get(inspection_type)
-    return str(path) if path and path.is_file() else ""
+    if path and path.is_file():
+        try:
+            project_root = Path(__file__).resolve().parents[1]
+            return str(path.relative_to(project_root)).replace("\\", "/")
+        except Exception:
+            return str(path)
+    return str(path) if path else ""
 
 
 def model_settings_for_inspection(inspection_type: str) -> tuple[str, float]:
@@ -170,7 +195,11 @@ def analyze_image(
 ):
     if image is None:
         empty = None
-        return empty, empty, empty, empty, empty, empty, "먼저 이미지를 업로드하세요.", pd.DataFrame()
+        user_guide = (
+            "⚠️ **분석할 용접 이미지가 업로드되지 않았습니다.**\n\n"
+            "좌측의 '용접 이미지 업로드' 영역에 분석할 용접 X-ray 또는 외관(VT) 사진을 드래그하거나 선택하여 업로드해 주세요."
+        )
+        return empty, empty, empty, empty, empty, empty, [], user_guide, pd.DataFrame()
 
     views = preprocess_views(
         image,
@@ -179,6 +208,8 @@ def analyze_image(
         gradient_kernel=gradient_kernel,
         emboss_depth=emboss_depth,
         sharpen_amount=sharpen_amount,
+        dark_threshold=dark_threshold,
+        min_candidate_area=min_candidate_area,
     )
 
     detections = detect_with_yolo(
@@ -195,44 +226,61 @@ def analyze_image(
         )
 
     annotated = draw_detections(image, detections)
+    img_h, img_w = image.shape[:2]
+
     feature_rows = []
-    for det in detections:
+    crop_tuples = []
+    for idx, det in enumerate(detections, start=1):
         feature = extract_features(image, det)
         rule = explain_detection(det.label)
+        loc_desc = get_location_description(det.bbox, img_w, img_h)
+        crop_roi = crop_detection_roi(image, det.bbox, margin_pct=0.30)
+        
+        source_label = "YOLOv8" if "YOLO" in det.source else ("OpenCV 후보" if "OpenCV" in det.source else det.source)
+        if "review" in det.source:
+            source_label += " (검토)"
+
+        conf_str = f"{det.confidence:.2f}" if det.confidence > 0 else "-"
+        crop_tuples.append((crop_roi, f"#{idx}. {rule.display_name} ({conf_str})"))
+
         feature_rows.append(
             {
-                "defect": rule.defect_type,
-                "결함명 (Defect)": rule.display_name,
-                "source": det.source,
-                "검출 방식 (Source)": det.source,
-                "confidence": round(det.confidence, 3) if det.confidence > 0 else None,
-                "신뢰도 (Confidence)": round(det.confidence, 3) if det.confidence > 0 else None,
-                "risk": rule.risk_score,
-                "위험도 (Risk)": rule.risk_score,
+                "번호": f"#{idx}",
+                "결함명": rule.display_name,
+                "검출 방식": source_label,
+                "신뢰도": conf_str,
+                "위험도": f"{rule.risk_score}점",
+                "검출 위치": loc_desc,
+                "원형도": f"{feature['circularity']:.3f}",
+                "종횡비": f"{feature['aspect_ratio']:.2f}",
+                "평균 밝기": f"{feature['mean_brightness']:.1f}",
+                "권장 조치": rule.action,
                 "circularity": feature["circularity"],
-                "원형도 (Circularity)": feature["circularity"],
                 "aspect_ratio": feature["aspect_ratio"],
-                "종횡비 (Aspect Ratio)": feature["aspect_ratio"],
                 "mean_brightness": feature["mean_brightness"],
-                "평균 밝기 (Mean Brightness)": feature["mean_brightness"],
-                "std_brightness": feature["std_brightness"],
-                "area_ratio": feature["area_ratio"],
-                "action": rule.action,
-                "권장 조치 (Action)": rule.action,
             }
         )
 
-    summary = summarize(detections, feature_rows)
+    summary = summarize(detections, feature_rows, image.shape)
     table_columns = [
-        "결함명 (Defect)",
-        "검출 방식 (Source)",
-        "신뢰도 (Confidence)",
-        "위험도 (Risk)",
-        "원형도 (Circularity)",
-        "종횡비 (Aspect Ratio)",
-        "평균 밝기 (Mean Brightness)",
-        "권장 조치 (Action)",
+        "번호",
+        "결함명",
+        "검출 방식",
+        "신뢰도",
+        "위험도",
+        "검출 위치",
+        "원형도",
+        "종횡비",
+        "평균 밝기",
+        "권장 조치",
     ]
+    
+    df_result = pd.DataFrame(feature_rows)
+    if not df_result.empty and set(table_columns).issubset(df_result.columns):
+        df_result = df_result[table_columns]
+    else:
+        df_result = pd.DataFrame(columns=table_columns)
+
     return (
         image,
         annotated,
@@ -240,8 +288,9 @@ def analyze_image(
         views["blackhat"],
         views["gradient"],
         views["emboss"],
+        crop_tuples,
         summary,
-        pd.DataFrame(feature_rows, columns=table_columns),
+        df_result,
     )
 
 
@@ -280,6 +329,11 @@ with gr.Blocks(
             include_review_candidates = gr.Checkbox(
                 value=False,
                 label="낮은 신뢰도 검토 후보도 표시 (필요할 때만)",
+            )
+
+            gr.Markdown(
+                "**OpenCV 보조 후보 설정**  \n"
+                "<small>YOLO 모델 미사용 또는 후보 표시 옵션 활성화 시 적용되며, YOLO 검출 결과에는 영향을 주지 않습니다.</small>"
             )
 
             with gr.Row(elem_id="slider-grid"):
@@ -352,29 +406,36 @@ with gr.Blocks(
             gr.Markdown("### 검출 결과")
             with gr.Row():
                 original_output = gr.Image(
-                    label="원본 이미지", height=240, elem_classes="result-image"
+                    label="원본 이미지", height=480, elem_classes="result-image"
                 )
                 detection_output = gr.Image(
-                    label="검출 결과", height=240, elem_classes="result-image"
+                    label="검출 결과", height=480, elem_classes="result-image"
                 )
+
+            defect_crops_gallery = gr.Gallery(
+                label="🔍 검출 결함 독립 확대 카드 (Cropped Defect Detail Cards)",
+                columns=2,
+                height=420,
+                elem_classes="crop-gallery",
+            )
 
             gr.Markdown("### 전처리 근거 화면")
             with gr.Row(elem_id="evidence-grid"):
                 clahe_output = gr.Image(
-                    label="국소 대비 강화 (CLAHE)", height=160, elem_classes="evidence-image"
+                    label="국소 대비 강화 (CLAHE)", height=190, elem_classes="evidence-image"
                 )
                 blackhat_output = gr.Image(
-                    label="어두운 결함 강조 (Black-hat)",
-                    height=160,
+                    label="어두운 결함 & OpenCV 후보 윤곽 (Black-hat & Mask)",
+                    height=190,
                     elem_classes="evidence-image",
                 )
                 gradient_output = gr.Image(
                     label="방향성/경계 강조 (Gradient)",
-                    height=160,
+                    height=190,
                     elem_classes="evidence-image",
                 )
                 emboss_output = gr.Image(
-                    label="질감 강조 (Emboss)", height=160, elem_classes="evidence-image"
+                    label="질감 강조 (Emboss)", height=190, elem_classes="evidence-image"
                 )
 
             gr.Markdown("### 분석 결과")
@@ -401,6 +462,7 @@ with gr.Blocks(
         blackhat_output,
         gradient_output,
         emboss_output,
+        defect_crops_gallery,
         summary_output,
         feature_table,
     ]

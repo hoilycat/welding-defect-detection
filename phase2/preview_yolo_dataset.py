@@ -8,7 +8,11 @@ from pathlib import Path
 
 
 LOCAL_PACKAGES = Path(__file__).resolve().parent / ".packages"
-if LOCAL_PACKAGES.exists():
+if (
+    LOCAL_PACKAGES.exists()
+    and sys.version_info[:2] == (3, 12)
+    and sys.platform == "win32"
+):
     sys.path.insert(0, str(LOCAL_PACKAGES))
 
 import cv2
