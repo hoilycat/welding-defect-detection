@@ -54,18 +54,102 @@ from vision import (
 
 APP_CSS = """
 .gradio-container {
+    --body-background-fill: #090a0f;
+    --background-fill-primary: #090a0f;
+    --background-fill-secondary: #11131a;
+    --block-background-fill: #151720;
+    --block-border-color: #30333f;
+    --border-color-primary: #30333f;
+    --input-background-fill: #101219;
+    --button-primary-background-fill: #e85d2a;
+    --button-primary-background-fill-hover: #ff7538;
+    --button-primary-text-color: #fff8f1;
+    --body-text-color: #f7f3ed;
+    --body-text-color-subdued: #a9adb8;
     width: 100% !important;
     max-width: 1680px !important;
-    padding: 12px !important;
+    min-height: 100vh;
+    padding: 28px 24px 42px !important;
     overflow-x: clip;
+    color: #f7f3ed;
+    background:
+        radial-gradient(circle at 76% 0%, #311719 0, transparent 34%),
+        linear-gradient(145deg, #08090d, #11131a 55%, #130d0e) !important;
 }
-#dashboard-header h1 {
-    margin-bottom: 4px;
+.gradio-container::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.12;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.035) 4px);
+}
+#dashboard-header {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 20px;
+}
+.wv-brand-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    padding: 8px 4px 24px;
+    border-bottom: 1px solid #30333f;
+}
+.wv-eyebrow {
+    color: #ff8a35;
+    font: 700 12px/1.2 ui-monospace, monospace;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+.wv-brand-header h1 {
+    margin: 10px 0 8px;
+    color: #f7f3ed;
+    font-size: clamp(34px, 5vw, 58px);
+    letter-spacing: -.045em;
+}
+.wv-brand-header p {
+    margin: 0;
+    color: #a9adb8;
+}
+.wv-status {
+    flex: none;
+    padding: 11px 15px;
+    color: #52d28b;
+    border: 1px solid #52d28b;
+    border-radius: 999px;
+    background: #10271c;
+    font-weight: 800;
+}
+.wv-explain-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+}
+.wv-explain-strip > div {
+    padding: 14px 15px;
+    border: 1px solid #30333f;
+    border-radius: 13px;
+    background: linear-gradient(145deg, rgba(29,31,42,.96), rgba(18,20,27,.96));
+}
+.wv-explain-strip b {
+    display: block;
+    margin-bottom: 5px;
+    color: #ff8a35;
+}
+.wv-explain-strip span {
+    color: #a9adb8;
+    font-size: 12px;
+    line-height: 1.5;
 }
 #dashboard-shell {
+    position: relative;
+    z-index: 1;
     display: grid !important;
     grid-template-columns: minmax(390px, 0.9fr) minmax(0, 1.3fr);
-    gap: 12px;
+    gap: 18px;
     align-items: start;
 }
 #dashboard-shell > div {
@@ -75,11 +159,29 @@ APP_CSS = """
 #control-panel {
     position: sticky;
     top: 8px;
-    padding: 10px;
-    border: 1px solid var(--border-color-primary);
-    border-radius: 12px;
-    background: var(--block-background-fill);
+    padding: 18px;
+    border: 1px solid #30333f;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(29,31,42,.98), rgba(18,20,27,.98));
+    box-shadow: 0 18px 42px rgba(0,0,0,.22);
     overflow: visible;
+}
+#result-panel {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid #30333f;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(29,31,42,.96), rgba(18,20,27,.96));
+    box-shadow: 0 18px 42px rgba(0,0,0,.22);
+}
+.section-title h3 {
+    margin: 2px 0 10px !important;
+    color: #f7f3ed;
+}
+.section-title h3::before {
+    content: "◈";
+    margin-right: 8px;
+    color: #ff8a35;
 }
 #model-actions {
     display: block !important;
@@ -108,11 +210,25 @@ APP_CSS = """
     box-shadow: none !important;
 }
 #slider-grid > .form > div {
-    background: #ffffff !important;
-    border: 1px solid #eef0f3 !important;
-    border-radius: 8px !important;
-    padding: 4px 8px !important;
+    background: #101219 !important;
+    border: 1px solid #2d303a !important;
+    border-radius: 10px !important;
+    padding: 6px 9px !important;
     box-shadow: none !important;
+}
+button.primary {
+    border: 1px solid #ff8a35 !important;
+    background: linear-gradient(135deg, #d9472e, #ff8a35) !important;
+    box-shadow: 0 8px 24px rgba(232,93,42,.22) !important;
+    font-weight: 800 !important;
+}
+.block {
+    border-color: #30333f !important;
+    background: #11131a !important;
+}
+input, textarea {
+    color: #f7f3ed !important;
+    background: #0d0f15 !important;
 }
 #evidence-grid {
     display: grid !important;
@@ -122,10 +238,12 @@ APP_CSS = """
 .result-image:not(.modal) img {
     max-height: 480px;
     object-fit: contain;
+    background: #07080b;
 }
 .evidence-image:not(.modal) img {
     max-height: 200px;
     object-fit: contain;
+    background: #07080b;
 }
 .crop-gallery img {
     min-height: 340px !important;
@@ -137,7 +255,11 @@ APP_CSS = """
 #analysis-summary {
     max-height: 280px;
     overflow-y: auto;
-    padding-right: 8px;
+    padding: 14px;
+    border-left: 3px solid #ff8a35;
+    border-radius: 0 12px 12px 0;
+    background: #101219;
+    color: #d7d3ce;
 }
 #feature-table {
     max-height: fit-content !important;
@@ -147,6 +269,13 @@ APP_CSS = """
 @media (max-width: 820px) {
     .gradio-container {
         padding: 10px !important;
+    }
+    .wv-brand-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .wv-explain-strip {
+        grid-template-columns: 1fr;
     }
     #dashboard-shell {
         grid-template-columns: 1fr;
@@ -298,15 +427,28 @@ with gr.Blocks(
     title="WeldVision Phase 2 | 용접 결함 해석",
     fill_width=True,
 ) as demo:
-    with gr.Column(elem_id="dashboard-header"):
-        gr.Markdown("# WeldVision Phase 2 | 용접 결함 검출 및 해석")
-        gr.Markdown(
-            "왼쪽에서 조건을 조절하면서 오른쪽의 검출·전처리·해석 결과를 한눈에 비교하세요."
-        )
+    gr.HTML(
+        """
+        <header class="wv-brand-header">
+          <div>
+            <div class="wv-eyebrow">WeldVision · Inspection Control</div>
+            <h1>🔥 WeldVision</h1>
+            <p>RT·VT 용접 결함 검출, 전처리 근거와 위험도 해석을 한 화면에서 확인합니다.</p>
+          </div>
+          <div class="wv-status">LOCAL PROTOTYPE</div>
+        </header>
+        <div class="wv-explain-strip" aria-label="분석 결과를 읽는 순서">
+          <div><b>1 · 검출</b><span>YOLO 신뢰도 또는 OpenCV 후보 기준으로 결함 위치를 찾습니다.</span></div>
+          <div><b>2 · 근거</b><span>CLAHE·Black-hat·Gradient·Emboss 화면과 특징값을 함께 비교합니다.</span></div>
+          <div><b>3 · 해석</b><span>결함 규칙에 따라 위험도, 추정 원인과 권장 조치를 설명합니다.</span></div>
+        </div>
+        """,
+        elem_id="dashboard-header",
+    )
 
     with gr.Row(elem_id="dashboard-shell"):
         with gr.Column(elem_id="control-panel"):
-            gr.Markdown("### 입력 및 분석 조건")
+            gr.Markdown("### 입력 및 분석 조건", elem_classes="section-title")
             image_input = gr.Image(
                 label="용접 이미지 업로드 (Weld image)",
                 type="numpy",
@@ -402,8 +544,8 @@ with gr.Blocks(
                     elem_classes="compact-control",
                 )
 
-        with gr.Column():
-            gr.Markdown("### 검출 결과")
+        with gr.Column(elem_id="result-panel"):
+            gr.Markdown("### 검출 결과", elem_classes="section-title")
             with gr.Row():
                 original_output = gr.Image(
                     label="원본 이미지", height=480, elem_classes="result-image"
@@ -419,7 +561,7 @@ with gr.Blocks(
                 elem_classes="crop-gallery",
             )
 
-            gr.Markdown("### 전처리 근거 화면")
+            gr.Markdown("### 전처리 근거 화면", elem_classes="section-title")
             with gr.Row(elem_id="evidence-grid"):
                 clahe_output = gr.Image(
                     label="국소 대비 강화 (CLAHE)", height=190, elem_classes="evidence-image"
@@ -438,7 +580,7 @@ with gr.Blocks(
                     label="질감 강조 (Emboss)", height=190, elem_classes="evidence-image"
                 )
 
-            gr.Markdown("### 분석 결과")
+            gr.Markdown("### 왜 이렇게 판정됐나요?", elem_classes="section-title")
             summary_output = gr.Markdown(elem_id="analysis-summary")
             feature_table = gr.Dataframe(label="특징값 표", elem_id="feature-table")
 
