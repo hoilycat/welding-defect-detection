@@ -214,7 +214,7 @@ APP_CSS = """
 }
 #tuning-grid {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     margin-top: 4px;
 }
@@ -327,6 +327,7 @@ input, textarea {
         max-height: none;
     }
     #decision-panel { grid-column: auto; }
+    #tuning-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .primary-view img,
     .evidence-image img {
         max-height: 360px;
@@ -525,34 +526,6 @@ with gr.Blocks(
                 )
                 run_button = gr.Button("검사 실행", variant="primary", scale=1)
 
-            with gr.Accordion("실시간 전처리 조정", open=False):
-                gr.Markdown(
-                    "<small>슬라이더를 조절하면 비교 화면이 즉시 갱신됩니다.</small>",
-                    elem_classes="plain-markdown",
-                )
-                with gr.Row(elem_id="tuning-grid"):
-                    clahe_clip = gr.Slider(
-                        1.0, 8.0, value=3.0, step=0.2, label="CLAHE 강도"
-                    )
-                    blackhat_kernel = gr.Slider(
-                        3, 41, value=15, step=2, label="Black-hat 크기"
-                    )
-                    dark_threshold = gr.Slider(
-                        5, 250, value=150, step=5, label="어두운 후보 임계값"
-                    )
-                    min_candidate_area = gr.Slider(
-                        10, 3000, value=180, step=10, label="최소 후보 면적"
-                    )
-                    gradient_kernel = gr.Slider(
-                        3, 21, value=5, step=2, label="Gradient 부드러움"
-                    )
-                    emboss_depth = gr.Slider(
-                        1.0, 6.0, value=4.5, step=0.5, label="Emboss 깊이"
-                    )
-                    sharpen_amount = gr.Slider(
-                        0.0, 3.0, value=0.8, step=0.1, label="샤프닝 강도"
-                    )
-
             with gr.Accordion("고급 분석 설정", open=False):
                 model_path = gr.Textbox(
                     label="YOLOv8 모델 경로",
@@ -571,6 +544,34 @@ with gr.Blocks(
                 height=760,
                 elem_classes="primary-view",
             )
+
+            gr.Markdown("### Image Controls", elem_classes="section-title")
+            gr.Markdown(
+                "<small>슬라이더를 조절하면 오른쪽 비교 화면이 즉시 갱신됩니다.</small>",
+                elem_classes="plain-markdown",
+            )
+            with gr.Row(elem_id="tuning-grid"):
+                clahe_clip = gr.Slider(
+                    1.0, 8.0, value=3.0, step=0.2, label="CLAHE 강도"
+                )
+                blackhat_kernel = gr.Slider(
+                    3, 41, value=15, step=2, label="Black-hat 크기"
+                )
+                dark_threshold = gr.Slider(
+                    5, 250, value=150, step=5, label="어두운 후보 임계값"
+                )
+                min_candidate_area = gr.Slider(
+                    10, 3000, value=180, step=10, label="최소 후보 면적"
+                )
+                gradient_kernel = gr.Slider(
+                    3, 21, value=5, step=2, label="Gradient 부드러움"
+                )
+                emboss_depth = gr.Slider(
+                    1.0, 6.0, value=4.5, step=0.5, label="Emboss 깊이"
+                )
+                sharpen_amount = gr.Slider(
+                    0.0, 3.0, value=0.8, step=0.1, label="샤프닝 강도"
+                )
 
             with gr.Accordion("상세 측정값 및 권장 조치", open=False, elem_id="detail-panel"):
                 feature_table = gr.Dataframe(
