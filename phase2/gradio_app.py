@@ -54,17 +54,21 @@ from vision import (
 
 APP_CSS = """
 .gradio-container {
-    --wv-bg: #f5f2ed;
-    --wv-panel: #ffffff;
-    --wv-panel-alt: #f8f5f0;
-    --wv-line: #ded8d0;
-    --wv-text: #292522;
-    --wv-muted: #6f6a64;
-    --wv-input: #ffffff;
-    --wv-image: #e8e4de;
-    --wv-summary: #fff8f3;
-    --wv-shadow: rgba(76, 55, 43, .12);
-    --wv-scanline-opacity: 0;
+    --wv-bg: #070b10;
+    --wv-panel: #0e151d;
+    --wv-panel-alt: #111b25;
+    --wv-panel-soft: #15212d;
+    --wv-line: #243342;
+    --wv-line-strong: #385066;
+    --wv-text: #edf5fa;
+    --wv-muted: #8da0af;
+    --wv-accent: #53d5c3;
+    --wv-accent-soft: rgba(83, 213, 195, .12);
+    --wv-warning: #ff9b52;
+    --wv-danger: #ff5e69;
+    --wv-input: #091018;
+    --wv-image: #03070a;
+    --wv-shadow: rgba(0, 0, 0, .34);
     --body-background-fill: var(--wv-bg);
     --background-fill-primary: var(--wv-bg);
     --background-fill-secondary: var(--wv-panel-alt);
@@ -72,62 +76,53 @@ APP_CSS = """
     --block-border-color: var(--wv-line);
     --border-color-primary: var(--wv-line);
     --input-background-fill: var(--wv-input);
-    --button-primary-background-fill: #e85d2a;
-    --button-primary-background-fill-hover: #ff7538;
-    --button-primary-text-color: #fff8f1;
+    --button-primary-background-fill: #1c897d;
+    --button-primary-background-fill-hover: #24a395;
+    --button-primary-text-color: #f7fffd;
     --body-text-color: var(--wv-text);
     --body-text-color-subdued: var(--wv-muted);
     width: 100% !important;
-    max-width: 1680px !important;
+    max-width: 1920px !important;
     min-height: 100vh;
-    padding: 28px 24px 42px !important;
+    padding: 18px 22px 32px !important;
     overflow-x: clip;
     color: var(--wv-text);
     background: var(--wv-bg) !important;
-}
-.dark .gradio-container {
-    --wv-bg: #090a0f;
-    --wv-panel: #151720;
-    --wv-panel-alt: #101219;
-    --wv-line: #30333f;
-    --wv-text: #f7f3ed;
-    --wv-muted: #a9adb8;
-    --wv-input: #0d0f15;
-    --wv-image: #07080b;
-    --wv-summary: #101219;
-    --wv-shadow: rgba(0, 0, 0, .22);
-    --wv-scanline-opacity: .12;
 }
 .gradio-container::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
-    opacity: var(--wv-scanline-opacity);
-    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.035) 4px);
+    opacity: .22;
+    background:
+        linear-gradient(90deg, transparent 0 49.9%, rgba(83,213,195,.025) 50%, transparent 50.1%),
+        repeating-linear-gradient(0deg, transparent 0 4px, rgba(255,255,255,.018) 5px);
 }
 #dashboard-header {
     position: relative;
     z-index: 1;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
 }
 #dashboard-title-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     gap: 24px;
-    padding: 8px 4px 24px;
+    padding: 8px 8px 17px;
     border-bottom: 1px solid var(--wv-line);
 }
 #dashboard-header h1 {
-    margin: 0 0 8px;
+    margin: 0 0 4px;
     color: var(--wv-text);
-    font-size: clamp(30px, 4vw, 48px);
-    letter-spacing: -.045em;
+    font-size: clamp(28px, 3vw, 42px);
+    letter-spacing: -.035em;
+    white-space: nowrap;
 }
 #dashboard-header p {
     margin: 0;
     color: var(--wv-muted);
+    font-size: 13px;
 }
 #dashboard-header .block,
 #dashboard-header .prose,
@@ -137,102 +132,122 @@ APP_CSS = """
     background: transparent !important;
     box-shadow: none !important;
 }
-.wv-theme-switch {
+.wv-console-meta {
     display: flex;
     flex: none;
     gap: 8px;
+    align-items: center;
 }
-.wv-theme-switch a {
-    padding: 9px 12px;
-    color: var(--wv-text);
+.wv-console-meta span {
+    padding: 7px 10px;
     border: 1px solid var(--wv-line);
-    border-radius: 999px;
-    background: var(--wv-panel);
-    font-size: 13px;
-    font-weight: 700;
-    text-decoration: none;
+    border-radius: 6px;
+    background: var(--wv-panel-alt);
+    color: var(--wv-muted);
+    font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .08em;
 }
-.wv-theme-switch a:hover {
-    color: #e85d2a;
-    border-color: #e85d2a;
+.wv-console-meta .status-ready {
+    color: var(--wv-accent);
+    border-color: rgba(83,213,195,.5);
+    background: var(--wv-accent-soft);
 }
 #dashboard-shell {
     position: relative;
     z-index: 1;
     display: grid !important;
-    grid-template-columns: minmax(390px, 0.9fr) minmax(0, 1.3fr);
-    gap: 18px;
+    grid-template-columns: minmax(285px, 310px) minmax(720px, 1fr) minmax(400px, 440px);
+    gap: 14px;
     align-items: start;
 }
 #dashboard-shell > div {
     min-width: 0 !important;
     width: auto !important;
 }
-#control-panel {
+#control-panel,
+#decision-panel {
     position: sticky;
-    top: 8px;
-    padding: 18px;
-    border: 1px solid var(--wv-line);
-    border-radius: 16px;
-    background: var(--wv-panel);
-    box-shadow: 0 18px 42px var(--wv-shadow);
-    overflow: visible;
+    top: 10px;
+    max-height: calc(100vh - 30px);
+    overflow-y: auto;
 }
-#result-panel {
-    min-width: 0;
-    padding: 18px;
+#control-panel,
+#viewer-panel,
+#decision-panel {
+    padding: 14px;
     border: 1px solid var(--wv-line);
-    border-radius: 16px;
+    border-radius: 10px;
     background: var(--wv-panel);
-    box-shadow: 0 18px 42px var(--wv-shadow);
+    box-shadow: 0 14px 34px var(--wv-shadow);
+}
+#viewer-panel {
+    background: #0a1118;
+}
+#decision-panel {
+    background: var(--wv-panel-alt);
 }
 .section-title h3 {
-    margin: 2px 0 10px !important;
+    margin: 0 0 8px !important;
     color: var(--wv-text);
+    font: 800 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .06em;
+    text-transform: uppercase;
 }
 .section-title h3::before {
-    content: "◈";
+    content: "//";
     margin-right: 8px;
-    color: #ff8a35;
+    color: var(--wv-accent);
 }
-#model-actions {
-    display: block !important;
-}
-#model-actions > .form {
-    align-items: end;
+#quick-controls {
     gap: 8px;
+    align-items: end;
 }
-#slider-grid > .form > div,
-#evidence-grid > div {
+#quick-controls > div {
+    min-width: 0 !important;
+}
+#tuning-grid > .form > div,
+#evidence-grid > .form > div {
     min-width: 0 !important;
     width: auto !important;
     margin: 0 !important;
     justify-self: stretch;
 }
-#slider-grid {
-    display: block !important;
-    margin-top: 8px;
+#tuning-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 4px;
 }
-#slider-grid > .form {
+#evidence-grid {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+    margin-top: 4px;
+}
+#tuning-grid > .form,
+#evidence-grid > .form {
+    display: contents !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
 }
-#slider-grid > .form > div {
+#tuning-grid > .form > div {
     background: var(--wv-panel-alt) !important;
     border: 1px solid var(--wv-line) !important;
-    border-radius: 10px !important;
-    padding: 6px 9px !important;
+    border-radius: 7px !important;
+    padding: 5px 7px !important;
     box-shadow: none !important;
 }
 button.primary {
-    border: 1px solid #ff8a35 !important;
-    background: linear-gradient(135deg, #d9472e, #ff8a35) !important;
-    box-shadow: 0 8px 24px rgba(232,93,42,.22) !important;
+    min-height: 44px;
+    border: 1px solid var(--wv-accent) !important;
+    border-radius: 7px !important;
+    background: linear-gradient(135deg, #17766d, #25a394) !important;
+    box-shadow: 0 8px 22px rgba(36,163,149,.2) !important;
     font-weight: 800 !important;
+}
+.block, .panel {
+    border-radius: 7px !important;
 }
 .block {
     border-color: var(--wv-line) !important;
@@ -242,43 +257,57 @@ input, textarea {
     color: var(--wv-text) !important;
     background: var(--wv-input) !important;
 }
-#evidence-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-}
-.result-image:not(.modal) img {
-    max-height: 480px;
+.primary-view:not(.modal) img {
+    max-height: 750px;
     object-fit: contain;
     background: var(--wv-image);
 }
 .evidence-image:not(.modal) img {
-    max-height: 200px;
+    max-height: 175px;
     object-fit: contain;
     background: var(--wv-image);
 }
 .crop-gallery img {
-    min-height: 340px !important;
-    max-height: 400px !important;
+    min-height: 120px !important;
+    max-height: 150px !important;
     object-fit: contain !important;
-    background: #111 !important;
-    border-radius: 8px !important;
+    background: var(--wv-image) !important;
+    border-radius: 5px !important;
 }
 #analysis-summary {
-    max-height: 280px;
+    min-height: 175px;
+    max-height: 235px;
     overflow-y: auto;
-    padding: 14px;
-    border-left: 3px solid #ff8a35;
-    border-radius: 0 12px 12px 0;
-    background: var(--wv-summary);
+    padding: 13px;
+    border: 1px solid var(--wv-line-strong);
+    border-left: 3px solid var(--wv-accent);
+    border-radius: 6px;
+    background: #0b131b;
     color: var(--wv-text);
 }
-#feature-table {
-    max-height: fit-content !important;
-    overflow-x: auto;
-    font-size: 13px !important;
+#analysis-summary h3,
+#analysis-summary h4 {
+    color: var(--wv-accent);
 }
-@media (max-width: 820px) {
+#detail-panel {
+    margin-top: 12px;
+}
+#feature-table {
+    max-height: 340px !important;
+    overflow-x: auto;
+    font-size: 12px !important;
+}
+@media (max-width: 1400px) {
+    #dashboard-shell {
+        grid-template-columns: minmax(285px, 310px) minmax(0, 1fr);
+    }
+    #decision-panel {
+        grid-column: 2;
+        position: static;
+        max-height: none;
+    }
+}
+@media (max-width: 900px) {
     .gradio-container {
         padding: 10px !important;
     }
@@ -286,15 +315,22 @@ input, textarea {
         align-items: flex-start;
         flex-direction: column;
     }
+    #dashboard-header h1 {
+        white-space: normal;
+    }
     #dashboard-shell {
         grid-template-columns: 1fr;
     }
-    #control-panel {
+    #control-panel,
+    #decision-panel {
         position: static;
+        max-height: none;
     }
-    .result-image img,
+    #decision-panel { grid-column: auto; }
+    #tuning-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .primary-view img,
     .evidence-image img {
-        max-height: 280px;
+        max-height: 360px;
     }
 }
 """
@@ -337,7 +373,18 @@ def analyze_image(
             "⚠️ **분석할 용접 이미지가 업로드되지 않았습니다.**\n\n"
             "좌측의 '용접 이미지 업로드' 영역에 분석할 용접 X-ray 또는 외관(VT) 사진을 드래그하거나 선택하여 업로드해 주세요."
         )
-        return empty, empty, empty, empty, empty, empty, [], user_guide, pd.DataFrame()
+        return (
+            empty,
+            empty,
+            empty,
+            empty,
+            empty,
+            empty,
+            empty,
+            [],
+            user_guide,
+            pd.DataFrame(),
+        )
 
     views = preprocess_views(
         image,
@@ -426,6 +473,7 @@ def analyze_image(
         views["blackhat"],
         views["gradient"],
         views["emboss"],
+        views["sharpened"],
         crop_tuples,
         summary,
         df_result,
@@ -439,157 +487,144 @@ with gr.Blocks(
     with gr.Column(elem_id="dashboard-header"):
         with gr.Row(elem_id="dashboard-title-row"):
             with gr.Column():
-                gr.Markdown("# WeldVision Phase 2 | 용접 결함 검출 및 해석")
+                gr.Markdown("# WeldVision · Inspection Console")
                 gr.Markdown(
-                    "왼쪽에서 조건을 조절하면서 오른쪽의 검출·전처리·해석 결과를 한눈에 비교하세요."
+                    "RT·VT 용접 결함을 검출하고 판정 근거와 조치 정보를 한 화면에서 검토합니다."
                 )
             gr.HTML(
                 """
-                <nav class="wv-theme-switch" aria-label="화면 테마">
-                  <a href="?__theme=light" target="_self">☀️ Light</a>
-                  <a href="?__theme=dark" target="_self">🌙 Dark</a>
-                </nav>
+                <div class="wv-console-meta" aria-label="검사 시스템 상태">
+                  <span>YOLOv8</span>
+                  <span>RT / VT</span>
+                  <span class="status-ready">● SYSTEM READY</span>
+                </div>
                 """
             )
 
     with gr.Row(elem_id="dashboard-shell"):
         with gr.Column(elem_id="control-panel"):
-            gr.Markdown("### 입력 및 분석 조건", elem_classes="section-title")
+            gr.Markdown("### Inspection Input", elem_classes="section-title")
             image_input = gr.Image(
-                label="용접 이미지 업로드 (Weld image)",
+                label="검사 이미지 업로드",
                 type="numpy",
-                height=180,
+                height=170,
             )
             inspection_type = gr.Radio(
                 choices=[("방사선 검사 (RT)", "RT"), ("육안 검사 (VT)", "VT")],
                 value="RT",
                 label="검사 방식",
             )
-            with gr.Row(elem_id="model-actions"):
-                model_path = gr.Textbox(
-                    label="YOLOv8 모델 경로",
-                    value=model_path_for_inspection("RT"),
-                    placeholder="선택 입력: runs/detect/train/weights/best.pt",
-                    scale=3,
-                )
-                run_button = gr.Button("분석 시작", variant="primary", scale=1)
 
-            include_review_candidates = gr.Checkbox(
-                value=False,
-                label="낮은 신뢰도 검토 후보도 표시 (필요할 때만)",
-            )
-
-            gr.Markdown(
-                "**OpenCV 보조 후보 설정**  \n"
-                "<small>YOLO 모델 미사용 또는 후보 표시 옵션 활성화 시 적용되며, YOLO 검출 결과에는 영향을 주지 않습니다.</small>",
-                elem_classes="plain-markdown",
-            )
-
-            with gr.Row(elem_id="slider-grid"):
+            with gr.Row(elem_id="quick-controls"):
                 confidence_threshold = gr.Slider(
                     0.05,
                     0.95,
                     value=0.10,
                     step=0.05,
                     label="YOLO 신뢰도",
-                    elem_classes="compact-control",
+                    scale=2,
                 )
+                run_button = gr.Button("검사 실행", variant="primary", scale=1)
+
+            with gr.Accordion("고급 분석 설정", open=False):
+                model_path = gr.Textbox(
+                    label="YOLOv8 모델 경로",
+                    value=model_path_for_inspection("RT"),
+                    placeholder="선택 입력: runs/detect/train/weights/best.pt",
+                )
+                include_review_candidates = gr.Checkbox(
+                    value=False,
+                    label="낮은 신뢰도 검토 후보도 표시",
+                )
+
+        with gr.Column(elem_id="viewer-panel"):
+            gr.Markdown("### Live Inspection", elem_classes="section-title")
+            detection_output = gr.Image(
+                label="AI 검출 오버레이",
+                height=760,
+                elem_classes="primary-view",
+            )
+
+            gr.Markdown("### Image Controls", elem_classes="section-title")
+            gr.Markdown(
+                "<small>슬라이더를 조절하면 오른쪽 비교 화면이 즉시 갱신됩니다.</small>",
+                elem_classes="plain-markdown",
+            )
+            with gr.Row(elem_id="tuning-grid"):
                 clahe_clip = gr.Slider(
-                    1.0,
-                    8.0,
-                    value=3.0,
-                    step=0.2,
-                    label="CLAHE 강도",
-                    elem_classes="compact-control",
+                    1.0, 8.0, value=3.0, step=0.2, label="CLAHE 강도"
                 )
                 blackhat_kernel = gr.Slider(
-                    3,
-                    41,
-                    value=15,
-                    step=2,
-                    label="Black-hat 크기",
-                    elem_classes="compact-control",
+                    3, 41, value=15, step=2, label="Black-hat 크기"
                 )
                 dark_threshold = gr.Slider(
-                    5,
-                    250,
-                    value=150,
-                    step=5,
-                    label="어두운 후보 임계값",
-                    elem_classes="compact-control",
+                    5, 250, value=150, step=5, label="어두운 후보 임계값"
                 )
                 min_candidate_area = gr.Slider(
-                    10,
-                    3000,
-                    value=180,
-                    step=10,
-                    label="최소 후보 면적",
-                    elem_classes="compact-control",
+                    10, 3000, value=180, step=10, label="최소 후보 면적"
                 )
                 gradient_kernel = gr.Slider(
-                    3,
-                    21,
-                    value=5,
-                    step=2,
-                    label="Gradient 부드러움",
-                    elem_classes="compact-control",
+                    3, 21, value=5, step=2, label="Gradient 부드러움"
                 )
                 emboss_depth = gr.Slider(
-                    1.0,
-                    6.0,
-                    value=4.5,
-                    step=0.5,
-                    label="Emboss 깊이",
-                    elem_classes="compact-control",
+                    1.0, 6.0, value=4.5, step=0.5, label="Emboss 깊이"
                 )
                 sharpen_amount = gr.Slider(
-                    0.0,
-                    3.0,
-                    value=0.8,
-                    step=0.1,
-                    label="샤프닝 강도",
-                    elem_classes="compact-control",
+                    0.0, 3.0, value=0.8, step=0.1, label="샤프닝 강도"
                 )
 
-        with gr.Column(elem_id="result-panel"):
-            gr.Markdown("### 검출 결과", elem_classes="section-title")
-            with gr.Row():
-                original_output = gr.Image(
-                    label="원본 이미지", height=480, elem_classes="result-image"
-                )
-                detection_output = gr.Image(
-                    label="검출 결과", height=480, elem_classes="result-image"
+            with gr.Accordion("상세 측정값 및 권장 조치", open=False, elem_id="detail-panel"):
+                feature_table = gr.Dataframe(
+                    label="결함 특징값",
+                    elem_id="feature-table",
                 )
 
+        with gr.Column(elem_id="decision-panel"):
+            gr.Markdown("### Decision", elem_classes="section-title")
+            summary_output = gr.Markdown(elem_id="analysis-summary")
             defect_crops_gallery = gr.Gallery(
-                label="🔍 검출 결함 독립 확대 카드 (Cropped Defect Detail Cards)",
+                label="검출 영역 확대",
                 columns=2,
-                height=420,
+                height=185,
                 elem_classes="crop-gallery",
             )
 
-            gr.Markdown("### 전처리 근거 화면", elem_classes="section-title")
+            gr.Markdown("### Evidence Matrix", elem_classes="section-title")
+            gr.Markdown(
+                "<small>비교 이미지를 클릭하면 원본 크기로 확대됩니다.</small>",
+                elem_classes="plain-markdown",
+            )
             with gr.Row(elem_id="evidence-grid"):
+                original_output = gr.Image(
+                    label="원본",
+                    height=180,
+                    elem_classes="evidence-image",
+                )
                 clahe_output = gr.Image(
-                    label="국소 대비 강화 (CLAHE)", height=190, elem_classes="evidence-image"
+                    label="CLAHE",
+                    height=180,
+                    elem_classes="evidence-image",
                 )
                 blackhat_output = gr.Image(
-                    label="어두운 결함 & OpenCV 후보 윤곽 (Black-hat & Mask)",
-                    height=190,
+                    label="Black-hat",
+                    height=180,
                     elem_classes="evidence-image",
                 )
                 gradient_output = gr.Image(
-                    label="방향성/경계 강조 (Gradient)",
-                    height=190,
+                    label="Gradient",
+                    height=180,
                     elem_classes="evidence-image",
                 )
                 emboss_output = gr.Image(
-                    label="질감 강조 (Emboss)", height=190, elem_classes="evidence-image"
+                    label="Emboss",
+                    height=180,
+                    elem_classes="evidence-image",
                 )
-
-            gr.Markdown("### 분석 결과", elem_classes="section-title")
-            summary_output = gr.Markdown(elem_id="analysis-summary")
-            feature_table = gr.Dataframe(label="특징값 표", elem_id="feature-table")
+                sharpen_output = gr.Image(
+                    label="Sharpen",
+                    height=180,
+                    elem_classes="evidence-image",
+                )
 
     analysis_inputs = [
         image_input,
@@ -611,6 +646,7 @@ with gr.Blocks(
         blackhat_output,
         gradient_output,
         emboss_output,
+        sharpen_output,
         defect_crops_gallery,
         summary_output,
         feature_table,
